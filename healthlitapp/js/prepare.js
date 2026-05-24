@@ -60,7 +60,24 @@ Symptoms: ${symptoms || 'none described'}
 
     const data    = await response.json();
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const result  = JSON.parse(rawText.replace(/```json|```/g, '').trim());
+
+   if (!rawText) throw new Error('Gemini returned an empty response. Check your API key in config.js.');
+
+   // Strip any markdown fences Gemini might add
+   const cleaned = rawText
+  .replace(/```json/gi, '')
+  .replace(/```/g, '')
+  .trim();
+
+   // Find the JSON object inside the response
+   const jsonStart = cleaned.indexOf('{');
+   const jsonEnd   = cleaned.lastIndexOf('}');
+
+   if (jsonStart === -1 || jsonEnd === -1) {
+     throw new Error('Could not find JSON in Gemini response. Raw response: ' + cleaned.substring(0, 200));
+   }
+
+   const result = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
 
     document.getElementById('questionsList').innerHTML =
       (result.questions || []).map(q => `<li>${q}</li>`).join('');
