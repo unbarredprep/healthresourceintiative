@@ -88,6 +88,13 @@ const statsSection = document.querySelector('.stats');
 if (statsSection) statsObserver.observe(statsSection);
 
 document.addEventListener('DOMContentLoaded', () => {
+  const path = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.nav-link, .nav-links a').forEach(link => {
+    const href = link.getAttribute('href') || '';
+    const hrefPage = href.split('/').pop();
+    if (hrefPage === path) link.classList.add('active');
+  });
+
   const status = document.getElementById('demoStatus');
   const result = document.getElementById('demoResult');
   const lines  = document.getElementById('demoLines');
@@ -114,9 +121,4 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     result?.classList.add('show');
   }, 2400);
-
-  const path = window.location.pathname;
-  document.querySelectorAll('.nav-link').forEach(link => {
-    if (path.includes(link.getAttribute('href'))) link.classList.add('active');
-  });
 });
