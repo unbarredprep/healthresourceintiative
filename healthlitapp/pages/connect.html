@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Connect — ClearCare</title>
+  <title>Connect - ClearCare</title>
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,7 +23,7 @@
         <a href="connect.html" style="color:var(--blue-rich);background:var(--blue-mist);">Connect</a>
       </div>
       <div class="nav-right">
-        <button class="lang-btn" onclick="openLangModal()">EN ▾</button>
+        <button class="lang-btn" onclick="openLangModal()">EN v</button>
       </div>
       <button class="hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
         <span></span><span></span><span></span>
@@ -40,93 +40,138 @@
     <div class="container">
       <div class="section-label">Feature 03</div>
       <h1>Find free care near you</h1>
-      <p>Search clinics, FQHCs, urgent care, and pharmacies — filtered by your insurance status, language, and how far you can travel.</p>
+      <p>Search clinics, FQHCs, urgent care, pharmacies, mental health support, and telehealth options by location, language, cost, and distance.</p>
     </div>
   </section>
 
-  <div class="page-body">
-
-    <!-- SEARCH BAR -->
-    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
-      <input class="form-input" id="locationInput" type="text" placeholder="Enter your zip code or city…" style="flex:1;min-width:200px;" />
-      <button class="btn btn-primary" onclick="searchResources()">Search</button>
-    </div>
-
-    <!-- FILTERS -->
-    <div class="filter-bar">
-      <button class="filter-pill active" onclick="toggleFilter(this,'all')">All types</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'fqhc')">Free clinics (FQHC)</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'urgent')">Urgent care</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'mental')">Mental health</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'pharmacy')">Pharmacy</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'telehealth')">Telehealth</button>
-    </div>
-    <div class="filter-bar">
-      <button class="filter-pill active" onclick="toggleFilter(this,'any_ins')">Any insurance</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'uninsured')">Uninsured welcome</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'sliding')">Sliding-scale fees</button>
-      <button class="filter-pill" onclick="toggleFilter(this,'medicaid')">Accepts Medicaid</button>
-    </div>
-
-    <!-- RESULTS — placeholder cards, real data comes from HRSA API -->
-    <div id="resultsArea">
-      <div style="font-size:13px;color:var(--gray-500);margin-bottom:20px;">Showing sample results · Enter your location to search</div>
-
-      <div class="clinic-card">
-        <div class="clinic-dot"></div>
-        <div style="flex:1;">
-          <div class="clinic-name">Dallas County FQHC — Parkland Health</div>
-          <div class="clinic-meta">2.1 miles · Open today 8am–6pm · English, Spanish, Vietnamese</div>
-          <div class="clinic-chips">
-            <span class="chip chip-ok">Free / sliding scale</span>
-            <span class="chip" style="background:var(--blue-mist);color:var(--blue-deep);">Uninsured welcome</span>
-            <span class="chip" style="background:var(--blue-mist);color:var(--blue-deep);">Telehealth available</span>
-          </div>
-        </div>
-        <a href="#" class="btn btn-outline" style="flex-shrink:0;">Directions</a>
+  <main class="page-body connect-page">
+    <section class="connect-search-panel" aria-labelledby="connectSearchTitle">
+      <div>
+        <div class="section-label">Search nearby care</div>
+        <h2 id="connectSearchTitle">Start with a ZIP code, city, or your location</h2>
+        <p>Demo listings use local sample data so ClearCare can be shown without paid APIs or account keys.</p>
       </div>
 
-      <div class="clinic-card">
-        <div class="clinic-dot" style="background:var(--blue-mid);"></div>
-        <div style="flex:1;">
-          <div class="clinic-name">Tarrant County Urgent Care Network</div>
-          <div class="clinic-meta">3.7 miles · Open today 9am–9pm · English, Spanish</div>
-          <div class="clinic-chips">
-            <span class="chip" style="background:var(--amber-light);color:#92400E;">Sliding scale</span>
-            <span class="chip" style="background:var(--blue-mist);color:var(--blue-deep);">Accepts Medicaid</span>
-          </div>
+      <form class="connect-search-form" id="connectSearchForm">
+        <div class="connect-location-field">
+          <label class="form-label" for="locationInput">ZIP code or city</label>
+          <input class="form-input" id="locationInput" type="text" placeholder="Try 75201, Dallas, Houston, Austin..." autocomplete="postal-code" />
         </div>
-        <a href="#" class="btn btn-outline" style="flex-shrink:0;">Directions</a>
+        <div class="connect-search-actions">
+          <button class="btn btn-primary" type="submit">Search nearby care</button>
+          <button class="btn btn-outline" type="button" id="useLocationButton">Use my location</button>
+        </div>
+      </form>
+
+      <p class="connect-privacy-note">Your location is only used to find nearby resources.</p>
+      <div class="connect-message" id="locationMessage" aria-live="polite"></div>
+    </section>
+
+    <section class="connect-filter-panel" aria-label="Filter nearby care options">
+      <div class="connect-filter-header">
+        <div>
+          <div class="section-label">Filters</div>
+          <h2>Narrow the list</h2>
+        </div>
+        <button class="btn btn-outline" type="button" id="resetFiltersButton">Reset filters</button>
       </div>
 
-      <div class="clinic-card">
-        <div class="clinic-dot" style="background:var(--blue-soft);"></div>
-        <div style="flex:1;">
-          <div class="clinic-name">CommunityFirst Mental Health Center</div>
-          <div class="clinic-meta">5.0 miles · Call for hours · English, Spanish, Arabic</div>
-          <div class="clinic-chips">
-            <span class="chip chip-ok">Free counseling</span>
-            <span class="chip" style="background:var(--blue-mist);color:var(--blue-deep);">Telehealth available</span>
+      <div class="connect-filter-grid">
+        <div class="connect-filter-group">
+          <div class="connect-filter-label">Type of care</div>
+          <div class="filter-bar" role="group" aria-label="Type of care">
+            <button class="filter-pill active" type="button" data-filter="type" data-value="all" aria-pressed="true">All types</button>
+            <button class="filter-pill" type="button" data-filter="type" data-value="Free clinic" aria-pressed="false">Free clinic</button>
+            <button class="filter-pill" type="button" data-filter="type" data-value="FQHC" aria-pressed="false">FQHC</button>
+            <button class="filter-pill" type="button" data-filter="type" data-value="Urgent care" aria-pressed="false">Urgent care</button>
+            <button class="filter-pill" type="button" data-filter="type" data-value="Mental health" aria-pressed="false">Mental health</button>
+            <button class="filter-pill" type="button" data-filter="type" data-value="Pharmacy" aria-pressed="false">Pharmacy</button>
+            <button class="filter-pill" type="button" data-filter="type" data-value="Telehealth" aria-pressed="false">Telehealth</button>
           </div>
         </div>
-        <a href="#" class="btn btn-outline" style="flex-shrink:0;">Directions</a>
-      </div>
 
+        <div class="connect-filter-group">
+          <div class="connect-filter-label">Payment</div>
+          <div class="filter-bar" role="group" aria-label="Payment options">
+            <button class="filter-pill active" type="button" data-filter="payment" data-value="all" aria-pressed="true">Any payment</button>
+            <button class="filter-pill" type="button" data-filter="payment" data-value="Uninsured welcome" aria-pressed="false">Uninsured welcome</button>
+            <button class="filter-pill" type="button" data-filter="payment" data-value="Sliding scale" aria-pressed="false">Sliding scale</button>
+            <button class="filter-pill" type="button" data-filter="payment" data-value="Medicaid" aria-pressed="false">Medicaid</button>
+            <button class="filter-pill" type="button" data-filter="payment" data-value="Low-cost" aria-pressed="false">Low-cost</button>
+          </div>
+        </div>
+
+        <div class="connect-filter-group">
+          <div class="connect-filter-label">Language</div>
+          <div class="filter-bar" role="group" aria-label="Languages spoken">
+            <button class="filter-pill active" type="button" data-filter="language" data-value="all" aria-pressed="true">Any language</button>
+            <button class="filter-pill" type="button" data-filter="language" data-value="English" aria-pressed="false">English</button>
+            <button class="filter-pill" type="button" data-filter="language" data-value="Spanish" aria-pressed="false">Spanish</button>
+            <button class="filter-pill" type="button" data-filter="language" data-value="Vietnamese" aria-pressed="false">Vietnamese</button>
+            <button class="filter-pill" type="button" data-filter="language" data-value="Arabic" aria-pressed="false">Arabic</button>
+            <button class="filter-pill" type="button" data-filter="language" data-value="Chinese" aria-pressed="false">Chinese</button>
+            <button class="filter-pill" type="button" data-filter="language" data-value="Korean" aria-pressed="false">Korean</button>
+          </div>
+        </div>
+
+        <div class="connect-filter-group">
+          <div class="connect-filter-label">Distance</div>
+          <div class="filter-bar" role="group" aria-label="Maximum distance">
+            <button class="filter-pill" type="button" data-filter="distance" data-value="5" aria-pressed="false">5 miles</button>
+            <button class="filter-pill" type="button" data-filter="distance" data-value="10" aria-pressed="false">10 miles</button>
+            <button class="filter-pill active" type="button" data-filter="distance" data-value="25" aria-pressed="true">25 miles</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="connect-layout">
+      <aside class="connect-side-column" aria-label="Saved care options and call helper">
+        <section class="connect-saved-card">
+          <div class="connect-card-title">Saved care options</div>
+          <div id="savedCareOptions" class="connect-saved-list" aria-live="polite"></div>
+        </section>
+
+        <section class="connect-helper-card">
+          <div class="connect-card-title">What to ask when you call</div>
+          <ul>
+            <li>Do you accept uninsured patients?</li>
+            <li>What documents should I bring?</li>
+            <li>Do you offer sliding-scale pricing?</li>
+            <li>Is an interpreter available?</li>
+            <li>Can I schedule an appointment today?</li>
+          </ul>
+        </section>
+      </aside>
+
+      <section class="connect-results-section" aria-labelledby="resultsTitle">
+        <div class="connect-results-header">
+          <div>
+            <div class="section-label">Nearby options</div>
+            <h2 id="resultsTitle">Care resources</h2>
+          </div>
+          <div class="connect-results-summary" id="resultsSummary" aria-live="polite"></div>
+        </div>
+
+        <div id="resultsArea" class="connect-results-list" aria-live="polite"></div>
+
+        <p class="connect-disclaimer">ClearCare helps you find possible care options, but listings may change. Call the provider before visiting. If this is an emergency, call 911.</p>
+      </section>
     </div>
-  </div>
+  </main>
 
   <div class="modal-overlay" id="langModal" onclick="closeLangModal()">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-title">Choose your language</div>
       <div class="lang-grid">
-        <button class="lang-option active" onclick="setLang('EN')">🇺🇸 English</button>
-        <button class="lang-option" onclick="setLang('ES')">🇲🇽 Español</button>
-        <button class="lang-option" onclick="setLang('ZH')">🇨🇳 中文</button>
-        <button class="lang-option" onclick="setLang('VI')">🇻🇳 Tiếng Việt</button>
-        <button class="lang-option" onclick="setLang('KO')">🇰🇷 한국어</button>
-        <button class="lang-option" onclick="setLang('AR')">🇸🇦 العربية</button>
-        <button class="lang-option" onclick="setLang('HT')">🇭🇹 Kreyòl</button>
-        <button class="lang-option" onclick="setLang('PT')">🇧🇷 Português</button>
+        <button class="lang-option active" onclick="setLang('EN')">English</button>
+        <button class="lang-option" onclick="setLang('ES')">Spanish</button>
+        <button class="lang-option" onclick="setLang('ZH')">Chinese</button>
+        <button class="lang-option" onclick="setLang('VI')">Vietnamese</button>
+        <button class="lang-option" onclick="setLang('KO')">Korean</button>
+        <button class="lang-option" onclick="setLang('AR')">Arabic</button>
+        <button class="lang-option" onclick="setLang('HT')">Kreyol</button>
+        <button class="lang-option" onclick="setLang('PT')">Portuguese</button>
       </div>
       <button class="modal-close" onclick="closeLangModal()">Done</button>
     </div>
