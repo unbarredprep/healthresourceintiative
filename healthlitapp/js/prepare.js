@@ -1,6 +1,6 @@
 /* ============================================================
    CLEARCARE — PREPARE PAGE JS
-   Calls Gemini API to generate appointment prep kits.
+   Calls Groq API to generate appointment prep kits.
    Requires: js/config.js loaded before this file in prepare.html
    ============================================================ */
 
@@ -29,56 +29,51 @@ async function buildPrepKit() {
     const systemPrompt = `You are a helpful medical appointment preparation assistant.
 Help patients prepare for their doctor visits.
 Respond in ${language}.
-Return ONLY a valid JSON object with these exact fields:
+Return ONLY a valid JSON object with these exact fields, no markdown, no extra text:
 {
   "questions": ["question 1", "question 2", "question 3", "question 4", "question 5", "question 6", "question 7"],
   "symptomSummary": "A short paragraph the patient can read aloud to their doctor",
   "medicationList": ["medication 1", "medication 2"],
   "checklist": ["item 1", "item 2", "item 3", "item 4", "item 5"]
-}
-No markdown, no extra text, just the JSON.`;
+}`;
 
-    const userMessage = `
-Condition: ${condition}
+    const userMessage = `Condition: ${condition}
 Appointment type: ${apptType || 'general'}
 Current medications: ${medications || 'none listed'}
-Symptoms: ${symptoms || 'none described'}
-    `.trim();
+Symptoms: ${symptoms || 'none described'}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.GROQ_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userMessage  }
+        ],
+        temperature: 0.3,
+        max_tokens: 1000
+      })
+    });
 
     const data    = await response.json();
-      console.log('Gemini raw response:', JSON.stringify(data));
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('Groq raw response:', JSON.stringify(data));
+    const rawText = data.choices?.[0]?.message?.content || '';
 
-   if (!rawText) throw new Error('Gemini returned an empty response. Check your API key in config.js.');
+    if (!rawText) throw new Error('No response from Groq. Check your API key in config.js.');
 
-   // Strip any markdown fences Gemini might add
-   const cleaned = rawText
-  .replace(/```json/gi, '')
-  .replace(/```/g, '')
-  .trim();
+    const cleaned   = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonStart = cleaned.indexOf('{');
+    const jsonEnd   = cleaned.lastIndexOf('}');
 
-   // Find the JSON object inside the response
-   const jsonStart = cleaned.indexOf('{');
-   const jsonEnd   = cleaned.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) {
+      throw new Error('Could not parse response. Raw: ' + cleaned.substring(0, 200));
+    }
 
-   if (jsonStart === -1 || jsonEnd === -1) {
-     throw new Error('Could not find JSON in Gemini response. Raw response: ' + cleaned.substring(0, 200));
-   }
-
-   const result = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
+    const result = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
 
     document.getElementById('questionsList').innerHTML =
       (result.questions || []).map(q => `<li>${q}</li>`).join('');
@@ -101,7 +96,7 @@ Symptoms: ${symptoms || 'none described'}
     document.getElementById('prepEmpty').innerHTML = `
       <div style="font-size:32px;margin-bottom:12px;">❌</div>
       <div style="font-family:var(--font-display);font-size:18px;color:var(--navy);margin-bottom:8px;">Something went wrong</div>
-      <div style="font-size:14px;color:var(--gray-500);">${err.message || 'Check your Gemini API key in js/config.js'}</div>
+      <div style="font-size:14px;color:var(--gray-500);">${err.message}</div>
     `;
   } finally {
     btn.textContent = 'Build my prep kit';
