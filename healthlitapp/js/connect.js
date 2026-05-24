@@ -291,6 +291,32 @@ const LOCATION_LOOKUP = {
   'chicago': { label: 'Chicago, IL', lat: 41.8839, lng: -87.6236 }
 };
 
+CARE_RESOURCES.forEach(resource => {
+  const zipKey = resource.zip;
+  const cityStateKey = normalizeLocationInput(`${resource.city} ${resource.state}`);
+  const cityCommaStateKey = normalizeLocationInput(`${resource.city}, ${resource.state}`);
+
+  if (!LOCATION_LOOKUP[zipKey]) {
+    LOCATION_LOOKUP[zipKey] = {
+      label: `${resource.zip} (${resource.city}, ${resource.state})`,
+      lat: resource.lat,
+      lng: resource.lng
+    };
+  }
+
+  if (!LOCATION_LOOKUP[cityStateKey]) {
+    LOCATION_LOOKUP[cityStateKey] = {
+      label: `${resource.city}, ${resource.state}`,
+      lat: resource.lat,
+      lng: resource.lng
+    };
+  }
+
+  if (!LOCATION_LOOKUP[cityCommaStateKey]) {
+    LOCATION_LOOKUP[cityCommaStateKey] = LOCATION_LOOKUP[cityStateKey];
+  }
+});
+
 const DEFAULT_FILTERS = {
   type: 'all',
   payment: 'all',
@@ -299,7 +325,7 @@ const DEFAULT_FILTERS = {
 };
 
 const state = {
-  origin: LOCATION_LOOKUP.dallas,
+  origin: { ...LOCATION_LOOKUP.dallas, source: 'lookup' },
   filters: { ...DEFAULT_FILTERS },
   savedIds: new Set(loadSavedIds()),
   searchTimer: null
@@ -335,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function handleSearchSubmit(event) {
   event.preventDefault();
+  window.clearTimeout(state.searchTimer);
   clearMessage();
 
   const locationText = elements.input.value.trim();
@@ -349,7 +376,8 @@ function handleSearchSubmit(event) {
   const location = lookupLocation(locationText);
 
   if (!location) {
-    renderError('We could not search right now. Please try again.');
+    showMessage('That ZIP code or city is not in this demo yet. Try Dallas, Houston, Austin, San Antonio, El Paso, or Chicago.', 'error');
+    renderLocationNotFound();
     return;
   }
 
@@ -357,43 +385,52 @@ function handleSearchSubmit(event) {
 }
 
 function handleUseLocation() {
+  window.clearTimeout(state.searchTimer);
   clearMessage();
 
   if (!('geolocation' in navigator)) {
     showGeolocationDenied();
+    renderGeolocationDenied();
     return;
   }
 
-  elements.useLocationButton.disabled = true;
+  setLocationButtonLoading(true);
   showMessage('Asking your browser for your location...', 'info');
+  renderLoading();
 
   navigator.geolocation.getCurrentPosition(
     position => {
       const currentLocation = {
         label: 'your current location',
         lat: position.coords.latitude,
-        lng: position.coords.longitude
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        source: 'browser'
       };
 
       elements.input.value = 'Current location';
-      elements.useLocationButton.disabled = false;
-      showMessage('Using your location to sort nearby sample resources.', 'success');
+      setLocationButtonLoading(false);
+      showMessage(getLocationSuccessMessage(currentLocation), 'success');
       runSearch(currentLocation);
     },
     () => {
-      elements.useLocationButton.disabled = false;
+      setLocationButtonLoading(false);
       showGeolocationDenied();
+      renderGeolocationDenied();
     },
     {
-      enableHighAccuracy: false,
-      timeout: 10000,
-      maximumAge: 300000
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: 120000
     }
   );
 }
 
 function runSearch(location) {
-  state.origin = location;
+  state.origin = {
+    ...location,
+    source: location.source || 'lookup'
+  };
   renderLoading();
 
   window.clearTimeout(state.searchTimer);
@@ -483,14 +520,30 @@ function filterResources(resources, filters, origin) {
       distance: calculateDistanceMiles(origin, resource)
     }))
     .filter(resource => {
-      const matchesType = filters.type === 'all' || resource.type === filters.type;
-      const matchesPayment = filters.payment === 'all' || resource.payment.includes(filters.payment);
-      const matchesLanguage = filters.language === 'all' || resource.languages.includes(filters.language);
+      const matchesBasicFilters = resourceMatchesNonDistanceFilters(resource, filters);
       const matchesDistance = resource.distance <= filters.distance;
 
-      return matchesType && matchesPayment && matchesLanguage && matchesDistance;
+      return matchesBasicFilters && matchesDistance;
     })
     .sort((first, second) => first.distance - second.distance);
+}
+
+function resourceMatchesNonDistanceFilters(resource, filters) {
+  const matchesType = filters.type === 'all' || resource.type === filters.type;
+  const matchesPayment = filters.payment === 'all' || resource.payment.includes(filters.payment);
+  const matchesLanguage = filters.language === 'all' || resource.languages.includes(filters.language);
+
+  return matchesType && matchesPayment && matchesLanguage;
+}
+
+function getNearestMatchingResource(origin, filters) {
+  return CARE_RESOURCES
+    .map(resource => ({
+      ...resource,
+      distance: calculateDistanceMiles(origin, resource)
+    }))
+    .filter(resource => resourceMatchesNonDistanceFilters(resource, filters))
+    .sort((first, second) => first.distance - second.distance)[0] || null;
 }
 
 function renderLoading() {
@@ -513,27 +566,57 @@ function renderError(message) {
   `;
 }
 
+function renderGeolocationDenied() {
+  elements.resultsSummary.textContent = '';
+  elements.resultsArea.innerHTML = `
+    <div class="connect-state connect-state-error" role="alert">
+      <strong>We could not access your location. You can still search by ZIP code or city.</strong>
+    </div>
+  `;
+}
+
+function renderLocationNotFound() {
+  elements.resultsSummary.textContent = '';
+  elements.resultsArea.innerHTML = `
+    <div class="connect-state connect-state-error" role="alert">
+      <strong>That ZIP code or city is not in this demo yet.</strong>
+      <p>Try Dallas-Fort Worth, Houston, Austin, San Antonio, El Paso, or Chicago.</p>
+    </div>
+  `;
+}
+
 function renderResults() {
   const results = filterResources(CARE_RESOURCES, state.filters, state.origin);
   const resultWord = results.length === 1 ? 'result' : 'results';
 
-  elements.resultsSummary.textContent = `${results.length} ${resultWord} near ${state.origin.label}`;
+  elements.resultsSummary.textContent = `${results.length} ${resultWord} ${getOriginSummaryText()}`;
 
   if (!results.length) {
-    elements.resultsArea.innerHTML = `
-      <div class="connect-state" role="status">
-        <strong>No nearby results found. Try expanding the distance or changing filters.</strong>
-      </div>
-    `;
+    renderEmptyResults();
     return;
   }
 
   elements.resultsArea.innerHTML = results.map(renderResourceCard).join('');
 }
 
+function renderEmptyResults() {
+  const nearest = getNearestMatchingResource(state.origin, state.filters);
+  const nearestText = nearest
+    ? `<p>The closest matching sample listing is ${escapeHTML(nearest.name)} in ${escapeHTML(nearest.city)}, ${escapeHTML(nearest.state)} (${formatDistance(nearest.distance)} away).</p>`
+    : '<p>No sample listing matches the selected care type, payment, and language filters.</p>';
+
+  elements.resultsArea.innerHTML = `
+    <div class="connect-state" role="status">
+      <strong>No nearby results found. Try expanding the distance or changing filters.</strong>
+      ${nearestText}
+      <p>The built-in demo data covers Dallas-Fort Worth, Houston, Austin, San Antonio, El Paso, and Chicago.</p>
+    </div>
+  `;
+}
+
 function renderResourceCard(resource) {
   const isSaved = state.savedIds.has(resource.id);
-  const mapsUrl = createMapsUrl(resource);
+  const directionsUrl = createDirectionsUrl(resource);
   const telUrl = createTelUrl(resource.phone);
   const paymentBadges = resource.payment.map(option => `<span class="chip chip-ok">${escapeHTML(option)}</span>`).join('');
   const languages = resource.languages.map(escapeHTML).join(', ');
@@ -552,6 +635,7 @@ function renderResourceCard(resource) {
 
         <div class="clinic-chips">
           <span class="chip connect-type-chip">${escapeHTML(resource.type)}</span>
+          <span class="chip connect-demo-chip">Demo listing</span>
           ${paymentBadges}
         </div>
 
@@ -563,7 +647,7 @@ function renderResourceCard(resource) {
 
         <div class="connect-resource-actions">
           <a class="btn btn-outline" href="${telUrl}">Call ${escapeHTML(resource.phone)}</a>
-          <a class="btn btn-outline" href="${mapsUrl}" target="_blank" rel="noreferrer">Directions</a>
+          <a class="btn btn-outline" href="${directionsUrl}" target="_blank" rel="noopener noreferrer" aria-label="Open Google Maps directions to ${escapeHTML(resource.name)}">Directions</a>
           <button class="btn ${isSaved ? 'btn-outline' : 'btn-primary'}" type="button" data-save-id="${escapeHTML(resource.id)}">
             ${isSaved ? 'Saved' : 'Save'}
           </button>
@@ -639,6 +723,29 @@ function showGeolocationDenied() {
   showMessage('We could not access your location. You can still search by ZIP code or city.', 'error');
 }
 
+function setLocationButtonLoading(isLoading) {
+  elements.useLocationButton.disabled = isLoading;
+  elements.useLocationButton.setAttribute('aria-busy', String(isLoading));
+  elements.useLocationButton.textContent = isLoading ? 'Finding location...' : 'Use my location';
+}
+
+function getLocationSuccessMessage(location) {
+  if (!location.accuracy) {
+    return 'Using your browser location to sort nearby sample resources.';
+  }
+
+  const accuracyMiles = location.accuracy / 1609.344;
+  if (accuracyMiles >= 10) {
+    return `Using your approximate browser location. Distances may be off by about ${accuracyMiles.toFixed(0)} miles.`;
+  }
+
+  if (accuracyMiles >= 1) {
+    return `Using your browser location. Distances may be off by about ${accuracyMiles.toFixed(1)} miles.`;
+  }
+
+  return 'Using your browser location to sort nearby sample resources.';
+}
+
 function showMessage(message, type) {
   elements.locationMessage.textContent = message;
   elements.locationMessage.className = `connect-message ${type}`;
@@ -649,9 +756,9 @@ function clearMessage() {
   elements.locationMessage.className = 'connect-message';
 }
 
-function createMapsUrl(resource) {
-  const query = `${resource.address} ${resource.lat},${resource.lng}`;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+function createDirectionsUrl(resource) {
+  const destination = `${resource.lat},${resource.lng}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
 }
 
 function createTelUrl(phone) {
@@ -660,7 +767,16 @@ function createTelUrl(phone) {
 
 function formatDistance(distance) {
   if (distance < 0.1) return 'Less than 0.1 miles';
+  if (distance >= 100) return `${Math.round(distance)} miles`;
   return `${distance.toFixed(1)} miles`;
+}
+
+function getOriginSummaryText() {
+  if (state.origin.source === 'browser') {
+    return 'from your current location';
+  }
+
+  return `near ${state.origin.label}`;
 }
 
 function getDotClass(type) {
