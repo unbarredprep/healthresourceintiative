@@ -1,58 +1,92 @@
 /* ============================================================
    CLEARCARE — PREPARE PAGE JS
-   Handles prep kit form and will call Gemini API in production
+   Calls Gemini API to generate appointment prep kits.
+   Requires: js/config.js loaded before this file in prepare.html
    ============================================================ */
 
-function buildPrepKit() {
-  const condition = document.getElementById('condition').value.trim();
-  const apptType  = document.getElementById('apptType').value;
+async function buildPrepKit() {
+  const condition   = document.getElementById('condition').value.trim();
+  const apptType    = document.getElementById('apptType').value;
+  const medications = document.getElementById('medications').value.trim();
+  const symptoms    = document.getElementById('symptoms').value.trim();
+  const btn         = document.querySelector('[onclick="buildPrepKit()"]');
 
   if (!condition) {
-    document.getElementById('condition').focus();
     document.getElementById('condition').style.borderColor = 'var(--red)';
+    document.getElementById('condition').focus();
     return;
   }
   document.getElementById('condition').style.borderColor = '';
 
-  // TODO: In production, call Gemini API
-  // import { buildAppointmentPrep } from '../js/ai.js'
-  // const result = await buildAppointmentPrep({ condition, appointmentType: apptType, medications, language })
+  btn.textContent = 'Building your kit…';
+  btn.disabled    = true;
+  document.getElementById('prepEmpty').style.display  = 'none';
+  document.getElementById('prepResult').style.display = 'none';
 
-  // Simulated response for demo
-  document.getElementById('prepEmpty').style.display = 'none';
+  try {
+    const language = window.ClearCare?.getLangName() || 'English';
 
-  setTimeout(() => {
-    const questions = [
-      `What caused my ${condition || 'condition'} and is it serious?`,
-      'What are my treatment options and which do you recommend?',
-      'Are there any lifestyle changes I should make?',
-      'What side effects should I watch for with any new medication?',
-      'When should I come back for a follow-up?',
-      'Is there anything I should avoid doing or eating?',
-      'Who should I call if I have questions or feel worse?'
-    ];
+    const systemPrompt = `You are a helpful medical appointment preparation assistant.
+Help patients prepare for their doctor visits.
+Respond in ${language}.
+Return ONLY a valid JSON object with these exact fields:
+{
+  "questions": ["question 1", "question 2", "question 3", "question 4", "question 5", "question 6", "question 7"],
+  "symptomSummary": "A short paragraph the patient can read aloud to their doctor",
+  "medicationList": ["medication 1", "medication 2"],
+  "checklist": ["item 1", "item 2", "item 3", "item 4", "item 5"]
+}
+No markdown, no extra text, just the JSON.`;
+
+    const userMessage = `
+Condition: ${condition}
+Appointment type: ${apptType || 'general'}
+Current medications: ${medications || 'none listed'}
+Symptoms: ${symptoms || 'none described'}
+    `.trim();
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
+        })
+      }
+    );
+
+    const data    = await response.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const result  = JSON.parse(rawText.replace(/```json|```/g, '').trim());
+
     document.getElementById('questionsList').innerHTML =
-      questions.map(q => `<li>${q}</li>`).join('');
+      (result.questions || []).map(q => `<li>${q}</li>`).join('');
 
-    document.getElementById('symptomSummary').textContent =
-      `"I have been experiencing issues related to ${condition || 'my condition'}. I wanted to come in today to understand more about what is happening and what I can do about it."`;
+    document.getElementById('symptomSummary').textContent = result.symptomSummary || '';
 
-    const checklist = [
-      'Bring a photo ID and any insurance cards',
-      'Bring a list of all medications you are currently taking',
-      'Write down your symptoms and when they started',
-      'Bring this printed question list',
-      'Arrive 15 minutes early to fill out paperwork',
-      'Bring a trusted friend or family member if possible'
-    ];
-    document.getElementById('checklistItems').innerHTML = checklist.map(item => `
-      <li style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--blue-ghost);font-size:15px;color:var(--gray-700);">
-        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--blue-rich);cursor:pointer;flex-shrink:0;" />
-        ${item}
-      </li>
-    `).join('');
+    document.getElementById('checklistItems').innerHTML =
+      (result.checklist || []).map(item => `
+        <li style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--blue-ghost);font-size:15px;color:var(--gray-700);">
+          <input type="checkbox" style="width:18px;height:18px;accent-color:var(--blue-rich);cursor:pointer;flex-shrink:0;" />
+          ${item}
+        </li>
+      `).join('');
 
     document.getElementById('prepResult').style.display = 'block';
-    document.getElementById('prepResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 1200);
+    document.getElementById('prepResult').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    document.getElementById('prepEmpty').style.display  = 'block';
+    document.getElementById('prepEmpty').innerHTML = `
+      <div style="font-size:32px;margin-bottom:12px;">❌</div>
+      <div style="font-family:var(--font-display);font-size:18px;color:var(--navy);margin-bottom:8px;">Something went wrong</div>
+      <div style="font-size:14px;color:var(--gray-500);">${err.message || 'Check your Gemini API key in js/config.js'}</div>
+    `;
+  } finally {
+    btn.textContent = 'Build my prep kit';
+    btn.disabled    = false;
+  }
 }
