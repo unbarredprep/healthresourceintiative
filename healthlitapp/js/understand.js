@@ -1,6 +1,6 @@
 /* ============================================================
    CLEARCARE — UNDERSTAND PAGE JS
-   Calls Gemini API to explain uploaded medical documents.
+   Calls Groq API to explain uploaded medical documents.
    Requires: js/config.js loaded before this file in understand.html
    ============================================================ */
 
@@ -16,46 +16,65 @@ async function handleFile(input) {
   `;
 
   try {
-    const base64  = await fileToBase64(file);
+    // Step 1: Extract text from the file
+    const text = await extractText(file);
+
+    if (!text || text.trim().length < 10) {
+      throw new Error('Could not read text from this file. Please try a different file or type out the key details below.');
+    }
+
     const language = window.ClearCare?.getLangName() || 'English';
 
     const systemPrompt = `You are a friendly medical document translator.
 Explain the document in plain language at a 6th grade reading level.
 Respond in ${language}.
-Return ONLY a valid JSON object with these exact fields:
+Return ONLY a valid JSON object with these exact fields, no markdown, no extra text:
 {
   "summary": "2-3 sentence plain-language summary",
   "whatThisMeans": "what this means for the patient daily life",
   "warnings": ["warning 1", "warning 2"],
   "nextSteps": ["step 1", "step 2", "step 3"]
-}
-No markdown, no extra text, just the JSON.`;
+}`;
 
-    const content = [
-      { inlineData: { mimeType: file.type, data: base64 } },
-      { text: "Please explain this medical document." }
-    ];
+    const userMessage = `Please explain this medical document in plain language:\n\n${text.substring(0, 3000)}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: content }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1000 }
-        })
-      }
-    );
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.GROQ_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userMessage  }
+        ],
+        temperature: 0.2,
+        max_tokens: 1000
+      })
+    });
 
     const data    = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const result  = JSON.parse(rawText.replace(/```json|```/g, '').trim());
+    console.log('Groq raw response:', JSON.stringify(data));
+    const rawText = data.choices?.[0]?.message?.content || '';
 
-    document.getElementById('fileName').textContent      = file.name;
-    document.getElementById('summaryText').textContent   = result.summary;
-    document.getElementById('meansText').textContent     = result.whatThisMeans;
+    if (!rawText) throw new Error('No response from Groq. Check your API key in config.js.');
+
+    const cleaned   = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const jsonStart = cleaned.indexOf('{');
+    const jsonEnd   = cleaned.lastIndexOf('}');
+
+    if (jsonStart === -1 || jsonEnd === -1) {
+      throw new Error('Could not parse response. Raw: ' + cleaned.substring(0, 200));
+    }
+
+    const result = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
+
+    // Render results
+    document.getElementById('fileName').textContent    = file.name;
+    document.getElementById('summaryText').textContent = result.summary;
+    document.getElementById('meansText').textContent   = result.whatThisMeans;
 
     const warnings = document.getElementById('warningsArea');
     warnings.innerHTML = (result.warnings || []).map(w => `
@@ -74,17 +93,41 @@ No markdown, no extra text, just the JSON.`;
     zone.innerHTML = `
       <div class="upload-icon">❌</div>
       <h3>Something went wrong</h3>
-      <p>${err.message || 'Please check your Gemini API key in js/config.js'}</p>
-      <br/><span class="btn btn-primary" onclick="location.reload()">Try again</span>
+      <p>${err.message}</p>
+      <br/><span class="btn btn-primary" style="cursor:pointer;" onclick="location.reload()">Try again</span>
     `;
   }
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = () => reject(new Error('Could not read file'));
-    reader.readAsDataURL(file);
-  });
+// ── Extract text from uploaded file ──
+async function extractText(file) {
+  const type = file.type;
+
+  // Plain text files
+  if (type === 'text/plain') {
+    return await file.text();
+  }
+
+  // For PDF and images — read as text if possible, otherwise prompt user
+  if (type === 'application/pdf') {
+    // Basic PDF text extraction — works for text-based PDFs
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes       = new Uint8Array(arrayBuffer);
+    let text          = '';
+    for (let i = 0; i < bytes.length; i++) {
+      if (bytes[i] >= 32 && bytes[i] < 127) {
+        text += String.fromCharCode(bytes[i]);
+      }
+    }
+    // Pull out readable chunks
+    const readable = text.match(/[A-Za-z0-9\s,.\-:;'"!?()]{20,}/g) || [];
+    return readable.join(' ');
+  }
+
+  // For images — ask user to describe or type the content
+  if (type.startsWith('image/')) {
+    throw new Error('Image files are not yet supported. Please type out the key details from your document in the text box instead, or upload a PDF.');
+  }
+
+  throw new Error('Unsupported file type. Please upload a PDF or text file.');
 }
