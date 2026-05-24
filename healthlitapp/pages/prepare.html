@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prepare — ClearCare</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <span class="logo-mark">C</span>
+        <span class="logo-text">ClearCare</span>
+      </a>
+      <div class="nav-links">
+        <a href="understand.html">Understand</a>
+        <a href="prepare.html" style="color:var(--blue-rich);background:var(--blue-mist);">Prepare</a>
+        <a href="connect.html">Connect</a>
+      </div>
+      <div class="nav-right">
+        <button class="lang-btn" onclick="openLangModal()">EN ▾</button>
+      </div>
+      <button class="hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-nav" id="mobileNav">
+      <a href="understand.html">Understand</a>
+      <a href="prepare.html">Prepare</a>
+      <a href="connect.html">Connect</a>
+    </div>
+  </nav>
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="section-label">Feature 02</div>
+      <h1>Prepare for your appointment</h1>
+      <p>Walk in confident. Get a personalized list of questions, a symptom summary, and a checklist — ready to hand to your doctor.</p>
+    </div>
+  </section>
+
+  <div class="page-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;">
+
+      <!-- FORM -->
+      <div>
+        <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);margin-bottom:28px;">Tell us about your visit</div>
+
+        <div class="form-group">
+          <label class="form-label">What condition or concern are you being seen for?</label>
+          <input class="form-input" type="text" id="condition" placeholder="e.g. high blood pressure, diabetes, back pain…" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">What type of appointment is this?</label>
+          <select class="form-select" id="apptType">
+            <option value="">Select appointment type</option>
+            <option value="primary">Primary care / check-up</option>
+            <option value="specialist">Specialist visit</option>
+            <option value="followup">Follow-up visit</option>
+            <option value="urgent">Urgent care</option>
+            <option value="er">Emergency room</option>
+            <option value="telehealth">Telehealth / video call</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Current medications (optional)</label>
+          <textarea class="form-textarea" id="medications" placeholder="List any medications you're currently taking…"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Symptoms you're experiencing (optional)</label>
+          <textarea class="form-textarea" id="symptoms" placeholder="Describe what you've been feeling…"></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-lg" onclick="buildPrepKit()" style="width:100%;">Build my prep kit</button>
+      </div>
+
+      <!-- RESULT -->
+      <div id="prepResult" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+          <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);">Your prep kit</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-outline" onclick="window.print()">Print</button>
+          </div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-section">
+            <div class="result-section-label">Questions to ask your doctor</div>
+            <ol id="questionsList" style="padding-left:20px;color:var(--gray-700);font-size:15px;line-height:2.2;"></ol>
+          </div>
+          <div class="result-section">
+            <div class="result-section-label">Symptom summary — read this to your doctor</div>
+            <div id="symptomSummary" style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-md);padding:16px;font-size:15px;color:var(--gray-700);line-height:1.7;font-style:italic;"></div>
+          </div>
+          <div class="result-section">
+            <div class="result-section-label">Checklist — before your appointment</div>
+            <ul id="checklistItems" style="padding-left:0;list-style:none;"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div id="prepEmpty" style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-xl);padding:48px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:16px;">📋</div>
+        <div style="font-family:var(--font-display);font-size:20px;color:var(--navy);margin-bottom:8px;">Your prep kit will appear here</div>
+        <div style="font-size:14px;color:var(--gray-500);">Fill in the form on the left and click "Build my prep kit"</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="langModal" onclick="closeLangModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Choose your language</div>
+      <div class="lang-grid">
+        <button class="lang-option active" onclick="setLang('EN')">🇺🇸 English</button>
+        <button class="lang-option" onclick="setLang('ES')">🇲🇽 Español</button>
+        <button class="lang-option" onclick="setLang('ZH')">🇨🇳 中文</button>
+        <button class="lang-option" onclick="setLang('VI')">🇻🇳 Tiếng Việt</button>
+        <button class="lang-option" onclick="setLang('KO')">🇰🇷 한국어</button>
+        <button class="lang-option" onclick="setLang('AR')">🇸🇦 العربية</button>
+        <button class="lang-option" onclick="setLang('HT')">🇭🇹 Kreyòl</button>
+        <button class="lang-option" onclick="setLang('PT')">🇧🇷 Português</button>
+      </div>
+      <button class="modal-close" onclick="closeLangModal()">Done</button>
+    </div>
+  </div>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/prepare.js"></script>
+</body>
+</html>

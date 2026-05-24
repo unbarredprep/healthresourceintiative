@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Understand — ClearCare</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <span class="logo-mark">C</span>
+        <span class="logo-text">ClearCare</span>
+      </a>
+      <div class="nav-links">
+        <a href="understand.html" style="color:var(--blue-rich);background:var(--blue-mist);">Understand</a>
+        <a href="prepare.html">Prepare</a>
+        <a href="connect.html">Connect</a>
+      </div>
+      <div class="nav-right">
+        <button class="lang-btn" onclick="openLangModal()">EN ▾</button>
+      </div>
+      <button class="hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-nav" id="mobileNav">
+      <a href="understand.html">Understand</a>
+      <a href="prepare.html">Prepare</a>
+      <a href="connect.html">Connect</a>
+    </div>
+  </nav>
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="section-label">Feature 01</div>
+      <h1>Understand your documents</h1>
+      <p>Upload any medical document and get a plain-language explanation — in your language, at your reading level.</p>
+    </div>
+  </section>
+
+  <div class="page-body">
+
+    <!-- UPLOAD ZONE -->
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📄</div>
+      <h3>Drop your document here</h3>
+      <p>Supports PDF, JPG, PNG — discharge papers, lab results, prescriptions, anything</p>
+      <br />
+      <span class="btn btn-primary">Choose a file</span>
+      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFile(this)" />
+    </div>
+
+    <p style="text-align:center;font-size:13px;color:var(--gray-500);margin:16px 0 48px;">Or take a photo with your phone camera</p>
+
+    <!-- PLACEHOLDER RESULT (will be populated by AI in production) -->
+    <div class="result-card" id="resultCard" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);">Your explanation</div>
+          <div style="font-size:13px;color:var(--gray-500);margin-top:4px;" id="fileName"></div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline" onclick="window.print()">Print</button>
+          <button class="btn btn-primary">Save</button>
+        </div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-label">Plain language summary</div>
+        <p id="summaryText">Your document explanation will appear here once the AI processes it.</p>
+      </div>
+      <div class="result-section">
+        <div class="result-section-label">What this means for you</div>
+        <p id="meansText">This section will explain what the document means for your daily life.</p>
+      </div>
+      <div class="result-section">
+        <div class="result-section-label">Warning signs to watch for</div>
+        <div id="warningsArea"></div>
+      </div>
+      <div class="result-section">
+        <div class="result-section-label">Your next steps</div>
+        <ol id="nextStepsList" style="padding-left:20px;color:var(--gray-700);font-size:15px;line-height:2;"></ol>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LANGUAGE MODAL -->
+  <div class="modal-overlay" id="langModal" onclick="closeLangModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Choose your language</div>
+      <div class="lang-grid">
+        <button class="lang-option active" onclick="setLang('EN')">🇺🇸 English</button>
+        <button class="lang-option" onclick="setLang('ES')">🇲🇽 Español</button>
+        <button class="lang-option" onclick="setLang('ZH')">🇨🇳 中文</button>
+        <button class="lang-option" onclick="setLang('VI')">🇻🇳 Tiếng Việt</button>
+        <button class="lang-option" onclick="setLang('KO')">🇰🇷 한국어</button>
+        <button class="lang-option" onclick="setLang('AR')">🇸🇦 العربية</button>
+        <button class="lang-option" onclick="setLang('HT')">🇭🇹 Kreyòl</button>
+        <button class="lang-option" onclick="setLang('PT')">🇧🇷 Português</button>
+      </div>
+      <button class="modal-close" onclick="closeLangModal()">Done</button>
+    </div>
+  </div>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/understand.js"></script>
+</body>
+</html>

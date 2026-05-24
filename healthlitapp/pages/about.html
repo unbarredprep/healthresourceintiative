@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — ClearCare</title>
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <span class="logo-mark">C</span>
+        <span class="logo-text">ClearCare</span>
+      </a>
+      <div class="nav-links">
+        <a href="understand.html">Understand</a>
+        <a href="prepare.html">Prepare</a>
+        <a href="connect.html">Connect</a>
+      </div>
+      <div class="nav-right">
+        <button class="lang-btn" onclick="openLangModal()">EN ▾</button>
+      </div>
+      <button class="hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-nav" id="mobileNav">
+      <a href="understand.html">Understand</a>
+      <a href="prepare.html">Prepare</a>
+      <a href="connect.html">Connect</a>
+    </div>
+  </nav>
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="section-label">About ClearCare</div>
+      <h1>Healthcare in plain language</h1>
+      <p>Built for the Congressional App Challenge 2026. Built for the people who need it most.</p>
+    </div>
+  </section>
+
+  <div class="page-body" style="max-width:720px;">
+    <div style="font-family:var(--font-display);font-size:26px;color:var(--navy);margin-bottom:20px;line-height:1.3;">
+      Every day, people leave a doctor's office more confused than when they walked in.
+    </div>
+    <p style="font-size:16px;color:var(--gray-500);line-height:1.8;margin-bottom:24px;">
+      They receive a diagnosis they don't understand, a prescription they can't read, and discharge papers written in jargon. They go home with unanswered questions — and that confusion has real consequences.
+    </p>
+    <p style="font-size:16px;color:var(--gray-500);line-height:1.8;margin-bottom:48px;">
+      ClearCare exists to fix that. We translate medical documents into plain language, help people prepare for appointments, and connect them to free care in their community — in any language, for anyone.
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:60px;">
+      <div style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-lg);padding:28px;">
+        <div style="font-family:var(--font-display);font-size:36px;color:var(--blue-rich);margin-bottom:8px;">$0</div>
+        <div style="font-size:14px;color:var(--gray-700);">Cost to use ClearCare, forever</div>
+      </div>
+      <div style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-lg);padding:28px;">
+        <div style="font-family:var(--font-display);font-size:36px;color:var(--blue-rich);margin-bottom:8px;">10+</div>
+        <div style="font-size:14px;color:var(--gray-700);">Languages supported</div>
+      </div>
+    </div>
+
+    <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);margin-bottom:16px;">Important note</div>
+    <div style="background:var(--amber-light);border:1px solid #FDE68A;border-radius:var(--radius-md);padding:20px;font-size:14px;color:#92400E;line-height:1.7;margin-bottom:48px;">
+      ClearCare is not a medical provider. We do not diagnose conditions, prescribe treatment, or replace your doctor. We help you understand information your doctor already gave you. Always consult a licensed healthcare professional for medical advice.
+    </div>
+
+    <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);margin-bottom:16px;">Built for the Congressional App Challenge 2026</div>
+    <p style="font-size:15px;color:var(--gray-500);line-height:1.8;">
+      This project was created as an entry for the Congressional App Challenge 2026. The mission extends beyond the competition — ClearCare is designed to grow into a real tool for community health organizations, public libraries, and anyone who needs it.
+    </p>
+  </div>
+
+  <div class="modal-overlay" id="langModal" onclick="closeLangModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Choose your language</div>
+      <div class="lang-grid">
+        <button class="lang-option active" onclick="setLang('EN')">🇺🇸 English</button>
+        <button class="lang-option" onclick="setLang('ES')">🇲🇽 Español</button>
+        <button class="lang-option" onclick="setLang('ZH')">🇨🇳 中文</button>
+        <button class="lang-option" onclick="setLang('VI')">🇻🇳 Tiếng Việt</button>
+        <button class="lang-option" onclick="setLang('KO')">🇰🇷 한국어</button>
+        <button class="lang-option" onclick="setLang('AR')">🇸🇦 العربية</button>
+        <button class="lang-option" onclick="setLang('HT')">🇭🇹 Kreyòl</button>
+        <button class="lang-option" onclick="setLang('PT')">🇧🇷 Português</button>
+      </div>
+      <button class="modal-close" onclick="closeLangModal()">Done</button>
+    </div>
+  </div>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

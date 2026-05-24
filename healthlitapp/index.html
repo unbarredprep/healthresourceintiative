@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClearCare — Health Made Clear</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <span class="logo-mark">C</span>
+        <span class="logo-text">ClearCare</span>
+      </a>
+      <div class="nav-links">
+        <a href="pages/understand.html">Understand</a>
+        <a href="pages/prepare.html">Prepare</a>
+        <a href="pages/connect.html">Connect</a>
+      </div>
+      <div class="nav-right">
+        <a href="pages/onboarding.html" class="btn btn-ghost">Get started</a>
+        <button class="lang-btn" onclick="openLangModal()">EN ▾</button>
+      </div>
+      <button class="hamburger" onclick="toggleMobileNav()" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-nav" id="mobileNav">
+      <a href="pages/understand.html">Understand</a>
+      <a href="pages/prepare.html">Prepare</a>
+      <a href="pages/connect.html">Connect</a>
+      <a href="pages/onboarding.html" class="btn btn-primary" style="margin-top:1rem;">Get started</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="grid-overlay"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">Congressional App Challenge 2026</div>
+      <h1 class="hero-title">
+        Healthcare, finally<br />
+        <em>in plain language</em>
+      </h1>
+      <p class="hero-sub">
+        Upload a medical document. Prepare for your appointment. Find free care near you.
+        In any language, for anyone.
+      </p>
+      <div class="hero-actions">
+        <a href="pages/onboarding.html" class="btn btn-primary btn-lg">Start for free</a>
+        <a href="#features" class="btn btn-outline btn-lg">See how it works</a>
+      </div>
+      <p class="hero-note">No account required &nbsp;·&nbsp; Free &nbsp;·&nbsp; Available in 10+ languages</p>
+    </div>
+    <div class="hero-visual">
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <div class="doc-icon">📄</div>
+          <div>
+            <div class="doc-title">Discharge Summary</div>
+            <div class="doc-sub">St. Mary's Hospital</div>
+          </div>
+          <div class="doc-badge">Processing…</div>
+        </div>
+        <div class="doc-body">
+          <div class="doc-line doc-line-full"></div>
+          <div class="doc-line doc-line-full"></div>
+          <div class="doc-line doc-line-short"></div>
+        </div>
+        <div class="doc-result">
+          <div class="result-label">Plain language summary</div>
+          <div class="result-text">Your blood pressure was high during your visit. The doctor wants you to take one white pill every morning with food and come back in 2 weeks.</div>
+          <div class="result-chips">
+            <span class="chip chip-warn">Watch for dizziness</span>
+            <span class="chip chip-ok">Follow-up: June 3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-label">What we do</div>
+      <h2 class="section-title">Three tools. One mission.</h2>
+      <div class="feature-grid">
+
+        <a href="pages/understand.html" class="feature-card feature-card--understand">
+          <div class="feature-num">01</div>
+          <div class="feature-icon-wrap">
+            <svg width="32" height="32" fill="none" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="28" rx="3" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="11" x2="23" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="16" x2="23" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="21" x2="17" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <h3>Understand</h3>
+          <p>Upload any medical document — discharge papers, lab results, prescriptions — and get a plain-language explanation instantly.</p>
+          <div class="feature-cta">Upload a document →</div>
+        </a>
+
+        <a href="pages/prepare.html" class="feature-card feature-card--prepare">
+          <div class="feature-num">02</div>
+          <div class="feature-icon-wrap">
+            <svg width="32" height="32" fill="none" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="28" rx="3" stroke="currentColor" stroke-width="1.5"/><line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="12" r="1.5" fill="currentColor"/><line x1="10" y1="18" x2="14" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="18" r="1.5" fill="currentColor"/><line x1="10" y1="24" x2="14" y2="24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="24" r="1.5" fill="currentColor"/><line x1="17" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="17" y1="18" x2="23" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="17" y1="24" x2="21" y2="24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <h3>Prepare</h3>
+          <p>Tell us your condition and upcoming appointment. Get a personalized question list, symptom summary, and checklist to bring.</p>
+          <div class="feature-cta">Build my prep kit →</div>
+        </a>
+
+        <a href="pages/connect.html" class="feature-card feature-card--connect">
+          <div class="feature-num">03</div>
+          <div class="feature-icon-wrap">
+            <svg width="32" height="32" fill="none" viewBox="0 0 32 32"><circle cx="16" cy="13" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 28c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <h3>Connect</h3>
+          <p>Find free clinics, FQHCs, urgent care, and pharmacies near you — filtered by insurance status, language, and distance.</p>
+          <div class="feature-cta">Find care near me →</div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO IT'S FOR -->
+  <section class="audience">
+    <div class="container">
+      <div class="section-label">Who this is for</div>
+      <h2 class="section-title">Built for the people left behind</h2>
+      <div class="audience-grid">
+        <div class="audience-item">
+          <div class="audience-icon">👨‍👩‍👧</div>
+          <div class="audience-label">Low-income families</div>
+        </div>
+        <div class="audience-item">
+          <div class="audience-icon">🌎</div>
+          <div class="audience-label">Non-English speakers</div>
+        </div>
+        <div class="audience-item">
+          <div class="audience-icon">👴</div>
+          <div class="audience-label">Elderly individuals</div>
+        </div>
+        <div class="audience-item">
+          <div class="audience-icon">🏥</div>
+          <div class="audience-label">Uninsured people</div>
+        </div>
+        <div class="audience-item">
+          <div class="audience-icon">🌾</div>
+          <div class="audience-label">Rural communities</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA STRIP -->
+  <section class="cta-strip">
+    <div class="container cta-inner">
+      <div>
+        <h2>Ready to make sense of your health?</h2>
+        <p>No account. No cost. No jargon.</p>
+      </div>
+      <a href="pages/onboarding.html" class="btn btn-primary btn-lg">Get started free</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="nav-logo">
+        <span class="logo-mark">C</span>
+        <span class="logo-text">ClearCare</span>
+      </div>
+      <div class="footer-links">
+        <a href="pages/about.html">About</a>
+        <a href="pages/understand.html">Understand</a>
+        <a href="pages/prepare.html">Prepare</a>
+        <a href="pages/connect.html">Connect</a>
+      </div>
+      <div class="footer-note">Built for the Congressional App Challenge 2026 · Free forever</div>
+    </div>
+  </footer>
+
+  <!-- LANGUAGE MODAL -->
+  <div class="modal-overlay" id="langModal" onclick="closeLangModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Choose your language</div>
+      <div class="lang-grid">
+        <button class="lang-option active" onclick="setLang('EN')">🇺🇸 English</button>
+        <button class="lang-option" onclick="setLang('ES')">🇲🇽 Español</button>
+        <button class="lang-option" onclick="setLang('ZH')">🇨🇳 中文</button>
+        <button class="lang-option" onclick="setLang('VI')">🇻🇳 Tiếng Việt</button>
+        <button class="lang-option" onclick="setLang('KO')">🇰🇷 한국어</button>
+        <button class="lang-option" onclick="setLang('AR')">🇸🇦 العربية</button>
+        <button class="lang-option" onclick="setLang('HT')">🇭🇹 Kreyòl</button>
+        <button class="lang-option" onclick="setLang('PT')">🇧🇷 Português</button>
+      </div>
+      <button class="modal-close" onclick="closeLangModal()">Done</button>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
