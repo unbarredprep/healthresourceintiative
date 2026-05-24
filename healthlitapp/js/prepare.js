@@ -59,6 +59,7 @@ Symptoms: ${symptoms || 'none described'}
     );
 
     const data    = await response.json();
+      console.log('Gemini raw response:', JSON.stringify(data));
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
    if (!rawText) throw new Error('Gemini returned an empty response. Check your API key in config.js.');
