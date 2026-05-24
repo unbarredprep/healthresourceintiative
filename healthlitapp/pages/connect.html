@@ -40,7 +40,7 @@
     <div class="container">
       <div class="section-label">Feature 03</div>
       <h1>Find free care near you</h1>
-      <p>Search clinics, FQHCs, urgent care, pharmacies, mental health support, and telehealth options by location, language, cost, and distance.</p>
+      <p>Search public health center and OpenStreetMap provider data by location, care type, and distance.</p>
     </div>
   </section>
 
@@ -49,7 +49,7 @@
       <div>
         <div class="section-label">Search nearby care</div>
         <h2 id="connectSearchTitle">Start with a ZIP code, city, or your location</h2>
-        <p>Search live provider listings by ZIP code, city, full address, or browser location.</p>
+        <p>Search public provider data by ZIP code, city, full address, or browser location.</p>
       </div>
 
       <form class="connect-search-form" id="connectSearchForm">
@@ -126,6 +126,7 @@
           <div>
             <div class="section-label">Nearby options</div>
             <h2 id="resultsTitle">Care resources</h2>
+            <p class="connect-data-note">Results come from public datasets and may be incomplete. Call ahead before visiting.</p>
           </div>
           <div class="connect-results-summary" id="resultsSummary" aria-live="polite"></div>
         </div>
@@ -133,6 +134,7 @@
         <div id="resultsArea" class="connect-results-list" aria-live="polite"></div>
 
         <p class="connect-disclaimer">ClearCare helps you find possible care options, but listings may change. Call the provider before visiting. If this is an emergency, call 911.</p>
+        <p class="connect-attribution">Location and provider results may use public data from HRSA and OpenStreetMap contributors.</p>
       </section>
     </div>
   </main>

@@ -6,9 +6,10 @@
   "observability": {
     "enabled": true
   },
-  // Set this as a Cloudflare Worker secret:
-  // wrangler secret put GOOGLE_MAPS_API_KEY
-  // Optional future hook: wrangler secret put HRSA_API_TOKEN
+  // Optional enrichment for HRSA Health Center web services:
+  // wrangler secret put HRSA_API_TOKEN
+  // Optional contact email passed to Nominatim per its usage policy:
+  // wrangler secret put NOMINATIM_CONTACT_EMAIL
   "assets": {
     "directory": "healthlitapp",
     "binding": "ASSETS",

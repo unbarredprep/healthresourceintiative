@@ -11,39 +11,6 @@ const DEFAULT_FILTERS = {
   distance: 25
 };
 
-const FALLBACK_SAMPLE_RESULTS = [
-  {
-    id: 'sample-community-clinic',
-    name: 'Sample Community Clinic',
-    type: 'Clinic',
-    category: 'Sample result',
-    address: '123 Example Street',
-    phone: '',
-    website: '',
-    directionsUrl: 'https://www.google.com/maps',
-    mapsUrl: 'https://www.google.com/maps',
-    hoursText: 'Sample only',
-    source: 'Sample results',
-    distanceMiles: null,
-    disclaimer: 'Sample result only. Add a Google Maps API key to enable live search.'
-  },
-  {
-    id: 'sample-urgent-care',
-    name: 'Sample Urgent Care',
-    type: 'Urgent care',
-    category: 'Sample result',
-    address: '456 Example Avenue',
-    phone: '',
-    website: '',
-    directionsUrl: 'https://www.google.com/maps',
-    mapsUrl: 'https://www.google.com/maps',
-    hoursText: 'Sample only',
-    source: 'Sample results',
-    distanceMiles: null,
-    disclaimer: 'Sample result only. Add a Google Maps API key to enable live search.'
-  }
-];
-
 const state = {
   filters: { ...DEFAULT_FILTERS },
   currentSearch: null,
@@ -156,11 +123,6 @@ async function performSearch() {
       signal: state.activeController.signal
     });
 
-    if (data.configured === false) {
-      renderApiNotConfigured(data.message);
-      return;
-    }
-
     state.latestResults = Array.isArray(data.results) ? data.results : [];
     renderResults(data);
   } catch (error) {
@@ -168,11 +130,6 @@ async function performSearch() {
 
     if (error.code === 'LOCATION_NOT_FOUND') {
       renderLocationNotFound();
-      return;
-    }
-
-    if (error.code === 'API_NOT_CONFIGURED') {
-      renderApiNotConfigured();
       return;
     }
 
@@ -214,8 +171,8 @@ async function readJsonResponse(response) {
   const contentType = response.headers.get('content-type') || '';
 
   if (!contentType.includes('application/json')) {
-    const error = new Error('Live provider search is not configured yet.');
-    error.code = 'API_NOT_CONFIGURED';
+    const error = new Error('We could not search right now. Please try again.');
+    error.code = 'SEARCH_FAILED';
     throw error;
   }
 
@@ -265,7 +222,7 @@ function renderInitialState() {
   elements.resultsArea.innerHTML = `
     <div class="connect-state" role="status">
       <strong>Enter a ZIP code, city, or full address to find nearby care options.</strong>
-      <p>You can also use your browser location. Results update when you change the care type or distance.</p>
+      <p>You can also use your browser location. Results come from public datasets and may be incomplete.</p>
     </div>
   `;
 }
@@ -310,19 +267,6 @@ function renderLocationNotFound() {
     <div class="connect-state connect-state-error" role="alert">
       <strong>We could not find that location. Try entering a ZIP code, city, or full address.</strong>
     </div>
-  `;
-}
-
-function renderApiNotConfigured(message = 'Live provider search is not configured yet. Add a Google Maps API key to enable nationwide search.') {
-  state.latestResults = FALLBACK_SAMPLE_RESULTS;
-  elements.resultsSummary.textContent = 'Sample results';
-  elements.resultsArea.innerHTML = `
-    <div class="connect-state connect-setup-state" role="status">
-      <strong>Live provider search is not configured yet.</strong>
-      <p>${escapeHTML(message)}</p>
-      <p>These backup cards are sample results only.</p>
-    </div>
-    ${FALLBACK_SAMPLE_RESULTS.map(renderResourceCard).join('')}
   `;
 }
 

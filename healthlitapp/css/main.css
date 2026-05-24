@@ -1034,6 +1034,13 @@ img { max-width: 100%; display: block; }
   padding: 7px 12px;
   white-space: nowrap;
 }
+.connect-data-note {
+  color: var(--gray-500);
+  font-size: 13px;
+  line-height: 1.55;
+  margin-top: 4px;
+  max-width: 520px;
+}
 .connect-results-list {
   display: flex;
   flex-direction: column;
@@ -1146,6 +1153,12 @@ img { max-width: 100%; display: block; }
   color: var(--gray-500);
   font-size: 13px;
   line-height: 1.6;
+}
+.connect-attribution {
+  color: var(--gray-500);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
 }
 .dot-free-clinic { background: var(--teal); }
 .dot-fqhc { background: var(--blue-rich); }

@@ -74,8 +74,8 @@ healthlitapp/
 
 - Pure HTML + CSS + Vanilla JS (no build step required)
 - Gemini 2.0 Flash API — free tier, no credit card
-- HRSA Health Center API — free government data
-- Google Places API — $200/month free credit
+- HRSA Health Center Data — free government data
+- OpenStreetMap / Overpass / Nominatim — public map and provider data
 - Vercel — free hosting
 - Supabase — (future) auth and saved documents
 
