@@ -1,6 +1,10 @@
-# wrangler files
-.wrangler
-.dev.vars*
-!.dev.vars.example
-.env*
-!.env.example
+# API Keys — never push these to GitHub
+js/config.js
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
