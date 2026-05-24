@@ -222,7 +222,21 @@ img { max-width: 100%; display: block; }
 .audience-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
 .audience-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(168,204,240,0.12); border-radius: var(--radius-xl); padding: 32px 24px; transition: all 0.25s ease; cursor: default; }
 .audience-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(168,204,240,0.25); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.25); }
-.audience-card-icon { font-size: 36px; margin-bottom: 16px; }
+.audience-card-icon {
+  width: 52px; height: 52px;
+  background: rgba(168,204,240,0.10);
+  border: 1px solid rgba(168,204,240,0.18);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue-pale);
+  margin-bottom: 20px;
+  transition: all 0.25s;
+}
+.audience-card:hover .audience-card-icon {
+  background: rgba(168,204,240,0.18);
+  border-color: rgba(168,204,240,0.30);
+  color: var(--white);
+}
 .audience-card-title { font-size: 15px; font-weight: 600; color: var(--white); margin-bottom: 10px; }
 .audience-card-desc { font-size: 13px; color: rgba(168,204,240,0.60); line-height: 1.65; }
 
