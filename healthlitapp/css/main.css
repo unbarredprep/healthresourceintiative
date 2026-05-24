@@ -1070,6 +1070,10 @@ img { max-width: 100%; display: block; }
   background: var(--blue-mist);
   color: var(--blue-deep);
 }
+.connect-source-chip {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
 .connect-demo-chip {
   background: var(--gray-100);
   color: var(--gray-700);
@@ -1085,8 +1089,20 @@ img { max-width: 100%; display: block; }
 .connect-resource-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   margin-top: 18px;
+}
+.connect-action-note {
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 600;
+}
+.connect-card-disclaimer {
+  margin-top: 12px;
+  color: var(--gray-500);
+  font-size: 12px;
+  line-height: 1.5;
 }
 .connect-state {
   background: var(--blue-mist);
@@ -1107,6 +1123,9 @@ img { max-width: 100%; display: block; }
   background: var(--red-light);
   border-color: #FCA5A5;
   color: #991B1B;
+}
+.connect-setup-state {
+  margin-bottom: 16px;
 }
 .connect-spinner {
   width: 28px;

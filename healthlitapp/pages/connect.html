@@ -49,13 +49,13 @@
       <div>
         <div class="section-label">Search nearby care</div>
         <h2 id="connectSearchTitle">Start with a ZIP code, city, or your location</h2>
-        <p>Demo listings use local sample data so ClearCare can be shown without paid APIs or account keys.</p>
+        <p>Search live provider listings by ZIP code, city, full address, or browser location.</p>
       </div>
 
       <form class="connect-search-form" id="connectSearchForm">
         <div class="connect-location-field">
-          <label class="form-label" for="locationInput">ZIP code or city</label>
-          <input class="form-input" id="locationInput" type="text" placeholder="Try 75201, 77003, Dallas, Houston, Austin, Chicago..." autocomplete="postal-code" />
+          <label class="form-label" for="locationInput">ZIP code, city, or address</label>
+          <input class="form-input" id="locationInput" type="text" placeholder="Try 60601, Atlanta, or 1600 Pennsylvania Ave..." autocomplete="street-address" />
         </div>
         <div class="connect-search-actions">
           <button class="btn btn-primary" type="submit">Search nearby care</button>
@@ -64,7 +64,6 @@
       </form>
 
       <p class="connect-privacy-note">Your location is only used to find nearby resources.</p>
-      <p class="connect-demo-note">Sample coverage: Dallas-Fort Worth, Houston, Austin, San Antonio, El Paso, and Chicago.</p>
       <div class="connect-message" id="locationMessage" aria-live="polite"></div>
     </section>
 
@@ -81,37 +80,13 @@
         <div class="connect-filter-group">
           <div class="connect-filter-label">Type of care</div>
           <div class="filter-bar" role="group" aria-label="Type of care">
-            <button class="filter-pill active" type="button" data-filter="type" data-value="all" aria-pressed="true">All types</button>
-            <button class="filter-pill" type="button" data-filter="type" data-value="Free clinic" aria-pressed="false">Free clinic</button>
-            <button class="filter-pill" type="button" data-filter="type" data-value="FQHC" aria-pressed="false">FQHC</button>
-            <button class="filter-pill" type="button" data-filter="type" data-value="Urgent care" aria-pressed="false">Urgent care</button>
-            <button class="filter-pill" type="button" data-filter="type" data-value="Mental health" aria-pressed="false">Mental health</button>
-            <button class="filter-pill" type="button" data-filter="type" data-value="Pharmacy" aria-pressed="false">Pharmacy</button>
-            <button class="filter-pill" type="button" data-filter="type" data-value="Telehealth" aria-pressed="false">Telehealth</button>
-          </div>
-        </div>
-
-        <div class="connect-filter-group">
-          <div class="connect-filter-label">Payment</div>
-          <div class="filter-bar" role="group" aria-label="Payment options">
-            <button class="filter-pill active" type="button" data-filter="payment" data-value="all" aria-pressed="true">Any payment</button>
-            <button class="filter-pill" type="button" data-filter="payment" data-value="Uninsured welcome" aria-pressed="false">Uninsured welcome</button>
-            <button class="filter-pill" type="button" data-filter="payment" data-value="Sliding scale" aria-pressed="false">Sliding scale</button>
-            <button class="filter-pill" type="button" data-filter="payment" data-value="Medicaid" aria-pressed="false">Medicaid</button>
-            <button class="filter-pill" type="button" data-filter="payment" data-value="Low-cost" aria-pressed="false">Low-cost</button>
-          </div>
-        </div>
-
-        <div class="connect-filter-group">
-          <div class="connect-filter-label">Language</div>
-          <div class="filter-bar" role="group" aria-label="Languages spoken">
-            <button class="filter-pill active" type="button" data-filter="language" data-value="all" aria-pressed="true">Any language</button>
-            <button class="filter-pill" type="button" data-filter="language" data-value="English" aria-pressed="false">English</button>
-            <button class="filter-pill" type="button" data-filter="language" data-value="Spanish" aria-pressed="false">Spanish</button>
-            <button class="filter-pill" type="button" data-filter="language" data-value="Vietnamese" aria-pressed="false">Vietnamese</button>
-            <button class="filter-pill" type="button" data-filter="language" data-value="Arabic" aria-pressed="false">Arabic</button>
-            <button class="filter-pill" type="button" data-filter="language" data-value="Chinese" aria-pressed="false">Chinese</button>
-            <button class="filter-pill" type="button" data-filter="language" data-value="Korean" aria-pressed="false">Korean</button>
+            <button class="filter-pill active" type="button" data-filter="careType" data-value="all" aria-pressed="true">All care</button>
+            <button class="filter-pill" type="button" data-filter="careType" data-value="clinics" aria-pressed="false">Clinics</button>
+            <button class="filter-pill" type="button" data-filter="careType" data-value="pharmacies" aria-pressed="false">Pharmacies</button>
+            <button class="filter-pill" type="button" data-filter="careType" data-value="urgent" aria-pressed="false">Urgent care</button>
+            <button class="filter-pill" type="button" data-filter="careType" data-value="hospitals" aria-pressed="false">Hospitals</button>
+            <button class="filter-pill" type="button" data-filter="careType" data-value="mental" aria-pressed="false">Mental health</button>
+            <button class="filter-pill" type="button" data-filter="careType" data-value="low_cost" aria-pressed="false">Low-cost/free care</button>
           </div>
         </div>
 
@@ -121,6 +96,7 @@
             <button class="filter-pill" type="button" data-filter="distance" data-value="5" aria-pressed="false">5 miles</button>
             <button class="filter-pill" type="button" data-filter="distance" data-value="10" aria-pressed="false">10 miles</button>
             <button class="filter-pill active" type="button" data-filter="distance" data-value="25" aria-pressed="true">25 miles</button>
+            <button class="filter-pill" type="button" data-filter="distance" data-value="50" aria-pressed="false">50 miles</button>
           </div>
         </div>
       </div>
