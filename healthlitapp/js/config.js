@@ -10,6 +10,6 @@
    ============================================================ */
 
 const CONFIG = {
-  GEMINI_KEY:  "AQ.Ab8RN6JVLibYmIbKPdtjZBATBwwWa_W4wxaoYBLnNj8NE6uliw",
-  PLACES_KEY:  "AIzaSyBBinuebcyvU-Xj1Alx4cyYE4zQt-xynuU",
+  GROQ_KEY:   "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",
+  PLACES_KEY: "AIzaSyBBinuebcyvU-Xj1Alx4cyYE4zQt-xynuU",
 };
