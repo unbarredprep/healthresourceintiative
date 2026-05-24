@@ -10,6 +10,6 @@
    ============================================================ */
 
 const CONFIG = {
-  GEMINI_KEY:  "paste_your_gemini_key_here",
-  PLACES_KEY:  "paste_your_google_places_key_here",
+  GEMINI_KEY:  "AQ.Ab8RN6JVLibYmIbKPdtjZBATBwwWa_W4wxaoYBLnNj8NE6uliw",
+  PLACES_KEY:  "AIzaSyBBinuebcyvU-Xj1Alx4cyYE4zQt-xynuU",
 };
