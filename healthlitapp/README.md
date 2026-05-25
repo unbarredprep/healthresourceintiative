@@ -38,7 +38,7 @@ healthlitapp/
 
 ## Language-Powered Outputs
 
-Understand and Prepare use the Cloudflare Worker route `/api/health-output` to generate plain-language healthcare outputs in the selected language.
+The language picker controls the static site UI and the generated health outputs. The browser calls `/api/ui-translate` for page text and `/api/health-output` for Understand and Prepare results.
 
 Set the Gemini key as a Cloudflare secret:
 

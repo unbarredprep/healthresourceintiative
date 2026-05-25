@@ -10,8 +10,11 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_RESULTS = 30;
 const MAX_HEALTH_INPUT_CHARS = 12000;
 const MAX_IMAGE_DATA_URL_CHARS = 7000000;
+const MAX_UI_TRANSLATION_STRINGS = 100;
+const MAX_UI_TRANSLATION_CHARS = 500;
 const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
 const AI_NOT_CONFIGURED_MESSAGE = 'Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.';
+const UI_TRANSLATION_NOT_CONFIGURED_MESSAGE = 'Site translation is not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.';
 const LANGUAGE_TOOLS = globalThis.ClearCareLanguages;
 
 const cache = new Map();
@@ -93,6 +96,10 @@ export default {
 
     if (url.pathname === '/api/health-output/status') {
       return handleHealthOutputStatus(request, env);
+    }
+
+    if (url.pathname === '/api/ui-translate') {
+      return handleUiTranslate(request, env);
     }
 
     return env.ASSETS.fetch(request);
@@ -247,6 +254,70 @@ function handleHealthOutputStatus(request, env) {
   }, 200, { 'Cache-Control': 'no-store' });
 }
 
+async function handleUiTranslate(request, env) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders()
+    });
+  }
+
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
+  }
+
+  const geminiApiKey = getGeminiApiKey(env);
+  if (!geminiApiKey) {
+    return jsonResponse({
+      error: 'AI_NOT_CONFIGURED',
+      message: UI_TRANSLATION_NOT_CONFIGURED_MESSAGE
+    }, 503, { 'Cache-Control': 'no-store' });
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch (error) {
+    return jsonResponse({
+      error: 'BAD_REQUEST',
+      message: 'Invalid translation request.'
+    }, 400, { 'Cache-Control': 'no-store' });
+  }
+
+  try {
+    const selectedLanguage = LANGUAGE_TOOLS.getLanguage(payload.language);
+    const strings = normalizeUiTranslationStrings(payload.strings);
+
+    if (!strings.length || selectedLanguage.code === 'en') {
+      return jsonResponse({
+        language: selectedLanguage,
+        translations: Object.fromEntries(strings.map(text => [text, text]))
+      }, 200, { 'Cache-Control': 'no-store' });
+    }
+
+    const translations = await translateUiStrings({
+      strings,
+      selectedLanguage,
+      env,
+      geminiApiKey
+    });
+
+    return jsonResponse({
+      language: selectedLanguage,
+      translations
+    }, 200, { 'Cache-Control': 'no-store' });
+  } catch (error) {
+    console.error('UI translation failed', {
+      message: error.message,
+      code: error.code || 'UI_TRANSLATION_FAILED'
+    });
+    return jsonResponse({
+      error: error.code || 'UI_TRANSLATION_FAILED',
+      message: error.publicMessage || 'We could not translate the page right now. Please try again.'
+    }, error.status || 502, { 'Cache-Control': 'no-store' });
+  }
+}
+
 async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env, geminiApiKey }) {
   const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const response = await fetch(`${GEMINI_GENERATE_CONTENT_BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
@@ -281,6 +352,72 @@ async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType
   const outputText = extractGeminiText(data);
   const parsedOutput = parseJsonOutput(outputText);
   return normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, outputText);
+}
+
+async function translateUiStrings({ strings, selectedLanguage, env, geminiApiKey }) {
+  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  const response = await fetch(`${GEMINI_GENERATE_CONTENT_BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'x-goog-api-key': geminiApiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{
+          text: [
+            'You translate static website interface text for ClearCare, a healthcare access app.',
+            `Translate into ${selectedLanguage.instructionName}.`,
+            'Use plain, respectful language that is easy for patients and families to understand.',
+            'Keep the brand name ClearCare unchanged.',
+            'Keep numbers, URLs, email addresses, phone numbers, and HTML entities unchanged when they appear.',
+            'Do not add medical advice, diagnosis, or extra explanation.',
+            'Return only valid JSON.'
+          ].join(' ')
+        }]
+      },
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: [
+            'Translate each string below. Return JSON with exactly this shape:',
+            '{"translations":{"original string":"translated string"}}',
+            'The JSON object keys must exactly match the original strings.',
+            JSON.stringify(strings)
+          ].join('\n\n')
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 5000,
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.error?.message || `Gemini translation failed with ${response.status}`);
+    error.status = response.status >= 400 && response.status < 500 ? 502 : response.status;
+    error.code = 'UI_TRANSLATION_FAILED';
+    error.publicMessage = 'We could not translate the page right now. Please try again.';
+    throw error;
+  }
+
+  const outputText = extractGeminiText(data);
+  const parsedOutput = parseJsonOutput(outputText);
+  const rawTranslations = parsedOutput?.translations && typeof parsedOutput.translations === 'object'
+    ? parsedOutput.translations
+    : parsedOutput;
+
+  return strings.reduce((translations, source) => {
+    const translated = typeof rawTranslations?.[source] === 'string'
+      ? rawTranslations[source].trim()
+      : '';
+    translations[source] = translated || source;
+    return translations;
+  }, {});
 }
 
 function getGeminiApiKey(env) {
@@ -410,6 +547,16 @@ function normalizeImageDataUrl(value) {
   if (!dataUrl || dataUrl.length > MAX_IMAGE_DATA_URL_CHARS) return '';
   if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(dataUrl)) return '';
   return dataUrl;
+}
+
+function normalizeUiTranslationStrings(value) {
+  if (!Array.isArray(value)) return [];
+
+  return [...new Set(
+    value
+      .map(item => String(item || '').replace(/\s+/g, ' ').trim())
+      .filter(item => item.length > 1 && item.length <= MAX_UI_TRANSLATION_CHARS)
+  )].slice(0, MAX_UI_TRANSLATION_STRINGS);
 }
 
 function parseImageDataUrl(dataUrl) {

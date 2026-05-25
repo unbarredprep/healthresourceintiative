@@ -229,6 +229,7 @@
   </div>
 
   <script src="../js/languages.js"></script>
+  <script src="../js/i18n.js"></script>
   <script>
     let currentStep = 0;
     const totalSteps = 4;
@@ -242,8 +243,9 @@
     function renderOnboardingLanguages() {
       const grid = document.getElementById('onboardingLanguageGrid');
       grid.innerHTML = languageTools.languages.map(language => `
-        <button class="lang-option-lg ${language.code === prefs.lang ? 'active' : ''}" type="button" onclick="selectOption(this,'lang','${language.code}')">
-          ${language.label}
+        <button class="lang-option-lg ${language.code === prefs.lang ? 'active' : ''}" type="button" onclick="selectOption(this,'lang','${language.code}')" data-no-translate>
+          ${language.nativeLabel || language.label}
+          <span class="lang-option-english">${language.label}</span>
         </button>
       `).join('');
     }
@@ -272,8 +274,10 @@
       el.classList.add('active');
       prefs[key] = val;
       if (key === 'lang') {
-        localStorage.setItem(languageTools.STORAGE_KEY, val);
-        localStorage.removeItem(languageTools.LEGACY_STORAGE_KEY);
+        const language = languageTools.setStoredLanguage(localStorage, val);
+        document.documentElement.lang = language.code;
+        document.documentElement.dir = language.dir || 'ltr';
+        window.ClearCareI18n?.translatePage(language);
       }
     }
     function finishOnboarding() {
@@ -289,6 +293,10 @@
     }
 
     renderOnboardingLanguages();
+    const selectedLanguage = languageTools.getStoredLanguage(localStorage);
+    document.documentElement.lang = selectedLanguage.code;
+    document.documentElement.dir = selectedLanguage.dir || 'ltr';
+    window.ClearCareI18n?.translatePage(selectedLanguage);
   </script>
 </body>
 </html>

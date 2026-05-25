@@ -3,16 +3,16 @@
   const LEGACY_STORAGE_KEY = 'cc_lang';
 
   const languages = Object.freeze([
-    { code: 'en', label: 'English', instructionName: 'English' },
-    { code: 'es', label: 'Spanish', instructionName: 'Spanish' },
-    { code: 'ne', label: 'Nepali', instructionName: 'Nepali' },
-    { code: 'hi', label: 'Hindi', instructionName: 'Hindi' },
-    { code: 'ar', label: 'Arabic', instructionName: 'Arabic' },
-    { code: 'vi', label: 'Vietnamese', instructionName: 'Vietnamese' },
-    { code: 'zh', label: 'Chinese Simplified', instructionName: 'Simplified Chinese' },
-    { code: 'fr', label: 'French', instructionName: 'French' },
-    { code: 'ur', label: 'Urdu', instructionName: 'Urdu' },
-    { code: 'ko', label: 'Korean', instructionName: 'Korean' }
+    { code: 'en', label: 'English', nativeLabel: 'English', instructionName: 'English', dir: 'ltr' },
+    { code: 'es', label: 'Spanish', nativeLabel: 'Español', instructionName: 'Spanish', dir: 'ltr' },
+    { code: 'ne', label: 'Nepali', nativeLabel: 'नेपाली', instructionName: 'Nepali', dir: 'ltr' },
+    { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी', instructionName: 'Hindi', dir: 'ltr' },
+    { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', instructionName: 'Arabic', dir: 'rtl' },
+    { code: 'vi', label: 'Vietnamese', nativeLabel: 'Tiếng Việt', instructionName: 'Vietnamese', dir: 'ltr' },
+    { code: 'zh', label: 'Chinese Simplified', nativeLabel: '简体中文', instructionName: 'Simplified Chinese', dir: 'ltr' },
+    { code: 'fr', label: 'French', nativeLabel: 'Français', instructionName: 'French', dir: 'ltr' },
+    { code: 'ur', label: 'Urdu', nativeLabel: 'اردو', instructionName: 'Urdu', dir: 'rtl' },
+    { code: 'ko', label: 'Korean', nativeLabel: '한국어', instructionName: 'Korean', dir: 'ltr' }
   ]);
 
   const languageMap = new Map(languages.map(language => [language.code, language]));
@@ -41,12 +41,29 @@
     return migratedLanguage;
   }
 
+  function hasStoredLanguage(storage) {
+    if (!storage) return false;
+    return Boolean(storage.getItem(STORAGE_KEY) || storage.getItem(LEGACY_STORAGE_KEY));
+  }
+
+  function setStoredLanguage(storage, code) {
+    const language = getLanguage(code);
+    if (storage) {
+      storage.setItem(STORAGE_KEY, language.code);
+      storage.removeItem(LEGACY_STORAGE_KEY);
+    }
+
+    return language;
+  }
+
   root.ClearCareLanguages = {
     STORAGE_KEY,
     LEGACY_STORAGE_KEY,
     languages,
     defaultLanguage,
+    hasStoredLanguage,
     getLanguage,
-    getStoredLanguage
+    getStoredLanguage,
+    setStoredLanguage
   };
 })(globalThis);

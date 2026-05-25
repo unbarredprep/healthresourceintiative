@@ -34,6 +34,7 @@ async function handleFile(input) {
 
   status.textContent = 'PDF text extraction is not available in this browser demo yet. Paste the document text below to generate an explanation.';
   status.className = 'inline-status error';
+  translateUnderstandElement(status);
   document.getElementById('documentTextInput').focus();
 }
 
@@ -103,6 +104,7 @@ function setUnderstandLoading(isLoading, message = '') {
   const button = document.getElementById('generateExplanationButton');
   button.disabled = isLoading;
   button.textContent = isLoading ? 'Generating...' : 'Generate explanation';
+  translateUnderstandElement(button);
   if (message) showUnderstandStatus(message, 'success');
 }
 
@@ -110,6 +112,7 @@ function showUnderstandStatus(message, type = '') {
   const status = document.getElementById('understandStatus');
   status.textContent = message;
   status.className = `inline-status ${type}`.trim();
+  translateUnderstandElement(status);
 }
 
 function clearUnderstandStatus() {
@@ -136,4 +139,8 @@ function escapeHTML(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function translateUnderstandElement(element) {
+  window.ClearCareI18n?.translateElement(element, { refreshOriginals: true });
 }

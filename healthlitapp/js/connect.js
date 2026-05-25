@@ -225,6 +225,7 @@ function renderInitialState() {
       <p>You can also use your browser location. Results come from public datasets and may be incomplete.</p>
     </div>
   `;
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderLoading() {
@@ -235,6 +236,7 @@ function renderLoading() {
       <strong>Searching nearby care options...</strong>
     </div>
   `;
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderResults(data) {
@@ -249,6 +251,8 @@ function renderResults(data) {
   }
 
   elements.resultsArea.innerHTML = state.latestResults.map(renderResourceCard).join('');
+  translateConnectElement(elements.resultsSummary);
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderNoResults() {
@@ -258,6 +262,7 @@ function renderNoResults() {
       <strong>No results found nearby. Try increasing the distance or changing filters.</strong>
     </div>
   `;
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderLocationNotFound() {
@@ -268,6 +273,7 @@ function renderLocationNotFound() {
       <strong>We could not find that location. Try entering a ZIP code, city, or full address.</strong>
     </div>
   `;
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderError(message) {
@@ -278,6 +284,7 @@ function renderError(message) {
       <strong>${escapeHTML(message)}</strong>
     </div>
   `;
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderGeolocationDenied() {
@@ -288,6 +295,7 @@ function renderGeolocationDenied() {
       <strong>We could not access your location. You can still search by ZIP code, city, or address.</strong>
     </div>
   `;
+  translateConnectElement(elements.resultsArea);
 }
 
 function renderResourceCard(resource) {
@@ -306,20 +314,20 @@ function renderResourceCard(resource) {
       <div class="connect-resource-main">
         <div class="connect-resource-topline">
           <div>
-            <h3 class="clinic-name">${escapeHTML(resource.name)}</h3>
-            <div class="connect-resource-location">${escapeHTML(resource.category || resource.type || 'Care resource')}</div>
+            <h3 class="clinic-name" data-no-translate>${escapeHTML(resource.name)}</h3>
+            <div class="connect-resource-location" data-no-translate>${escapeHTML(resource.category || resource.type || 'Care resource')}</div>
           </div>
-          <span class="connect-distance">${formatDistance(resource.distanceMiles)}</span>
+          <span class="connect-distance" data-no-translate>${formatDistance(resource.distanceMiles)}</span>
         </div>
 
         <div class="clinic-chips">
-          <span class="chip connect-type-chip">${escapeHTML(resource.type || 'Care resource')}</span>
-          <span class="chip connect-source-chip">${escapeHTML(resource.source || 'Provider search')}</span>
+          <span class="chip connect-type-chip" data-no-translate>${escapeHTML(resource.type || 'Care resource')}</span>
+          <span class="chip connect-source-chip" data-no-translate>${escapeHTML(resource.source || 'Provider search')}</span>
         </div>
 
         <div class="connect-resource-details">
-          <div><strong>Address:</strong> ${escapeHTML(resource.address || 'Address not available')}</div>
-          <div><strong>Hours:</strong> ${escapeHTML(resource.hoursText || 'Call to confirm hours')}</div>
+          <div><strong>Address:</strong> <span data-no-translate>${escapeHTML(resource.address || 'Address not available')}</span></div>
+          <div><strong>Hours:</strong> <span data-no-translate>${escapeHTML(resource.hoursText || 'Call to confirm hours')}</span></div>
         </div>
 
         <div class="connect-resource-actions">
@@ -392,6 +400,7 @@ function rerenderCurrentCards() {
     elements.resultsArea.innerHTML = setupState
       ? `${setupState.outerHTML}${state.latestResults.map(renderResourceCard).join('')}`
       : state.latestResults.map(renderResourceCard).join('');
+    translateConnectElement(elements.resultsArea);
   }
 }
 
@@ -400,18 +409,20 @@ function renderSavedCare() {
 
   if (!savedResources.length) {
     elements.savedCareOptions.innerHTML = '<p class="connect-empty-small">Save resources you may want to call later.</p>';
+    translateConnectElement(elements.savedCareOptions);
     return;
   }
 
   elements.savedCareOptions.innerHTML = savedResources.map(resource => `
     <div class="connect-saved-item">
-      <div>
-        <strong>${escapeHTML(resource.name)}</strong>
-        <span>${escapeHTML(resource.type || 'Care resource')} - ${escapeHTML(resource.phone || 'Phone not listed')}</span>
+        <div>
+        <strong data-no-translate>${escapeHTML(resource.name)}</strong>
+        <span data-no-translate>${escapeHTML(resource.type || 'Care resource')} - ${escapeHTML(resource.phone || 'Phone not listed')}</span>
       </div>
       <button type="button" class="connect-remove-saved" data-remove-saved="${escapeAttribute(resource.id)}" aria-label="Remove ${escapeAttribute(resource.name)} from saved care options">Remove</button>
     </div>
   `).join('');
+  translateConnectElement(elements.savedCareOptions);
 }
 
 function loadSavedResources() {
@@ -437,6 +448,7 @@ function setLocationButtonLoading(isLoading) {
   elements.useLocationButton.disabled = isLoading;
   elements.useLocationButton.setAttribute('aria-busy', String(isLoading));
   elements.useLocationButton.textContent = isLoading ? 'Finding location...' : 'Use my location';
+  translateConnectElement(elements.useLocationButton);
 }
 
 function showGeolocationDenied() {
@@ -446,6 +458,7 @@ function showGeolocationDenied() {
 function showMessage(message, type) {
   elements.locationMessage.textContent = message;
   elements.locationMessage.className = `connect-message ${type}`;
+  translateConnectElement(elements.locationMessage);
 }
 
 function clearMessage() {
@@ -504,4 +517,8 @@ function escapeHTML(value) {
 
 function escapeAttribute(value) {
   return escapeHTML(value).replace(/`/g, '&#096;');
+}
+
+function translateConnectElement(element) {
+  window.ClearCareI18n?.translateElement(element, { refreshOriginals: true });
 }

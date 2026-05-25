@@ -19,6 +19,7 @@ function openLangModal() {
 }
 function closeLangModal() {
   document.getElementById('langModal')?.classList.remove('open');
+  document.getElementById('langModal')?.removeAttribute('data-first-run');
   document.body.style.overflow = '';
 }
 
@@ -40,15 +41,31 @@ function renderLanguageOptions() {
   const languageTools = getLanguageTools();
   document.querySelectorAll('.lang-grid').forEach(grid => {
     grid.innerHTML = languageTools.languages.map(language => `
-      <button class="lang-option" type="button" data-language-code="${language.code}">
-        ${language.label}
+      <button class="lang-option" type="button" data-language-code="${language.code}" data-no-translate>
+        <span class="lang-option-native">${language.nativeLabel || language.label}</span>
+        <span class="lang-option-english">${language.label}</span>
       </button>
     `).join('');
   });
 }
 
+function ensureLanguageModalCopy() {
+  document.querySelectorAll('#langModal .modal').forEach(modal => {
+    const title = modal.querySelector('.modal-title');
+    if (title && !modal.querySelector('.modal-subtitle')) {
+      title.insertAdjacentHTML('afterend', '<p class="modal-subtitle">Choose the language you want to use. ClearCare will remember it on this device.</p>');
+    }
+
+    const closeButton = modal.querySelector('.modal-close');
+    if (closeButton && !closeButton.textContent.trim()) {
+      closeButton.textContent = 'Done';
+    }
+  });
+}
+
 function updateLanguageUI(language = getSelectedLanguage()) {
   document.documentElement.lang = language.code;
+  document.documentElement.dir = language.dir || 'ltr';
   document.querySelectorAll('.lang-option').forEach(option => {
     option.classList.toggle('active', option.dataset.languageCode === language.code);
   });
@@ -62,10 +79,12 @@ function updateLanguageUI(language = getSelectedLanguage()) {
 
 function setLang(code) {
   const languageTools = getLanguageTools();
-  const language = languageTools.getLanguage(code);
-  localStorage.setItem(languageTools.STORAGE_KEY, language.code);
-  localStorage.removeItem(languageTools.LEGACY_STORAGE_KEY || 'cc_lang');
+  const language = languageTools.setStoredLanguage
+    ? languageTools.setStoredLanguage(localStorage, code)
+    : languageTools.getLanguage(code);
   updateLanguageUI(language);
+  window.ClearCareI18n?.translatePage(language);
+  window.dispatchEvent(new CustomEvent('clearcare:languagechange', { detail: { language } }));
 }
 
 document.addEventListener('keydown', e => {
@@ -117,8 +136,17 @@ const statsSection = document.querySelector('.stats');
 if (statsSection) statsObserver.observe(statsSection);
 
 document.addEventListener('DOMContentLoaded', () => {
+  const languageTools = getLanguageTools();
+  const hadStoredLanguage = languageTools.hasStoredLanguage
+    ? languageTools.hasStoredLanguage(localStorage)
+    : Boolean(localStorage.getItem(languageTools.STORAGE_KEY));
+
+  ensureLanguageModalCopy();
   renderLanguageOptions();
-  updateLanguageUI();
+  const selectedLanguage = getSelectedLanguage();
+  updateLanguageUI(selectedLanguage);
+  window.ClearCareI18n?.translatePage(selectedLanguage);
+
   document.querySelectorAll('.lang-grid').forEach(grid => {
     grid.addEventListener('click', event => {
       const option = event.target.closest('[data-language-code]');
@@ -126,6 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
       setLang(option.dataset.languageCode);
     });
   });
+
+  if (!hadStoredLanguage && !window.location.pathname.endsWith('/onboarding.html')) {
+    const modal = document.getElementById('langModal');
+    if (modal) {
+      modal.setAttribute('data-first-run', 'true');
+      window.setTimeout(openLangModal, 250);
+    }
+  }
 
   const path = window.location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-link, .nav-links a').forEach(link => {

@@ -90,6 +90,7 @@ function setPrepareLoading(isLoading, message = '') {
   const button = document.getElementById('buildPrepButton');
   button.disabled = isLoading;
   button.textContent = isLoading ? 'Generating...' : 'Build my prep kit';
+  translatePrepareElement(button);
   if (message) showPrepareStatus(message, 'success');
 }
 
@@ -97,6 +98,7 @@ function showPrepareStatus(message, type = '') {
   const status = document.getElementById('prepareStatus');
   status.textContent = message;
   status.className = `inline-status ${type}`.trim();
+  translatePrepareElement(status);
 }
 
 function escapeHTML(value) {
@@ -106,4 +108,8 @@ function escapeHTML(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function translatePrepareElement(element) {
+  window.ClearCareI18n?.translateElement(element, { refreshOriginals: true });
 }

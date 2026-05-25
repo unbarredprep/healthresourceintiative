@@ -2,6 +2,7 @@
 
 ClearCare stores the selected language in `localStorage` as `clearcare_language`.
 The approved language list lives in `healthlitapp/js/languages.js` and is shared by the browser UI and Cloudflare Worker.
+The static website UI is translated through `/api/ui-translate`, and Understand/Prepare health outputs are generated through `/api/health-output`.
 
 ## Supported Languages
 
@@ -18,8 +19,10 @@ The approved language list lives in `healthlitapp/js/languages.js` and is shared
 
 ## Gemini Setup
 
-Understand and Prepare call the Cloudflare Worker route `/api/health-output`.
-The browser never receives the Gemini API key.
+The browser never receives the Gemini API key. The Worker uses it for:
+
+- `/api/ui-translate` site interface translation
+- `/api/health-output` localized Understand and Prepare outputs
 
 Set the production secret with Wrangler:
 
@@ -41,7 +44,7 @@ Optional model override:
 npx wrangler secret put GEMINI_MODEL
 ```
 
-If `GEMINI_API_KEY` is missing, ClearCare shows:
+If `GEMINI_API_KEY` is missing, ClearCare still loads in English. Understand and Prepare show:
 
 > Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.
 
@@ -60,11 +63,14 @@ Do not commit `.env`, `.dev.vars`, or API keys.
 1. Add a new object to `healthlitapp/js/languages.js`.
 2. Include `code`, `label`, and `instructionName`.
 3. Test the language modal and onboarding language list.
-4. Generate outputs on Understand and Prepare.
+4. Test UI translation on the home, Understand, Prepare, Connect, and About pages.
+5. Generate outputs on Understand and Prepare.
 
 ## Manual Verification
 
 - Select Spanish, refresh the page, and confirm Spanish stays selected.
+- Open the site in a fresh browser profile and confirm the language prompt appears.
+- Select Spanish and confirm navigation, page headings, form labels, placeholders, and buttons translate.
 - Generate an Understand output and confirm it is in Spanish.
 - Select Nepali and generate a Prepare output.
 - Remove or omit `GEMINI_API_KEY` and confirm the app shows the setup message instead of crashing.

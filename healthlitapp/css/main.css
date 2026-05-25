@@ -300,10 +300,13 @@ img { max-width: 100%; display: block; }
 @keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
 .modal-title { font-family: var(--font-display); font-size: 22px; color: var(--navy); }
+.modal-subtitle { color: var(--gray-500); font-size: 14px; line-height: 1.55; margin: 8px 0 22px; }
 .modal-x { background: var(--gray-100); border: none; border-radius: var(--radius-sm); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gray-700); transition: background 0.15s; }
 .modal-x:hover { background: var(--blue-ghost); }
 .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .lang-option { background: var(--off-white); border: 1.5px solid var(--blue-ghost); border-radius: var(--radius-md); padding: 13px 16px; font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--gray-700); cursor: pointer; text-align: left; transition: all 0.15s; }
+.lang-option-native { display: block; color: var(--navy); font-weight: 700; line-height: 1.2; }
+.lang-option-english { display: block; color: var(--gray-500); font-size: 12px; margin-top: 3px; line-height: 1.25; }
 .lang-option:hover  { background: var(--blue-mist); border-color: var(--blue-pale); }
 .lang-option.active { background: var(--blue-mist); border-color: var(--blue-rich); color: var(--blue-deep); }
 .modal-close { width: 100%; background: var(--blue-rich); color: var(--white); border: none; border-radius: var(--radius-md); padding: 14px; font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
