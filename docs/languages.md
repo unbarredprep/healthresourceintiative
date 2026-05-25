@@ -44,6 +44,8 @@ Optional model override:
 npx wrangler secret put GEMINI_MODEL
 ```
 
+By default, ClearCare uses `gemini-2.5-flash` for site translation and language-powered health outputs.
+
 If `GEMINI_API_KEY` is missing, ClearCare still loads in English. Understand and Prepare show:
 
 > Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.
