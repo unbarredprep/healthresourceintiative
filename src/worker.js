@@ -1,6 +1,7 @@
 import '../healthlitapp/js/languages.js';
 
 const CENSUS_GEOCODER_URL = 'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress';
+const ZIPPOPOTAMUS_URL = 'https://api.zippopotam.us/us';
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const HRSA_HEALTH_CENTERS_URL = 'https://data.hrsa.gov/HDWAPI3_External/api/v1/GetHealthCentersAroundALocation';
@@ -641,6 +642,12 @@ async function geocodeLocation(input, env) {
   const cached = getCached(cacheKey);
   if (cached !== undefined) return cached;
 
+  const zipResult = await geocodeWithZipCode(locationQuery).catch(() => null);
+  if (zipResult) {
+    setCached(cacheKey, zipResult);
+    return zipResult;
+  }
+
   const censusResult = await geocodeWithCensus(locationQuery).catch(() => null);
   if (censusResult) {
     setCached(cacheKey, censusResult);
@@ -650,6 +657,41 @@ async function geocodeLocation(input, env) {
   const nominatimResult = await geocodeWithNominatim(locationQuery, env).catch(() => null);
   setCached(cacheKey, nominatimResult);
   return nominatimResult;
+}
+
+async function geocodeWithZipCode(locationQuery) {
+  const match = locationQuery.match(/^\s*(\d{5})(?:-\d{4})?\s*$/);
+  if (!match) return null;
+
+  const response = await fetch(`${ZIPPOPOTAMUS_URL}/${match[1]}`, {
+    headers: {
+      'User-Agent': APP_USER_AGENT
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`ZIP lookup failed with ${response.status}`);
+  }
+
+  const data = await response.json();
+  const place = data.places?.[0];
+  const lat = Number(place?.latitude);
+  const lng = Number(place?.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  const label = [
+    data['post code'],
+    place['place name'],
+    place['state abbreviation']
+  ].filter(Boolean).join(', ');
+
+  return {
+    label: label || locationQuery,
+    lat,
+    lng,
+    source: 'Zippopotam.us ZIP lookup'
+  };
 }
 
 async function geocodeWithCensus(locationQuery) {

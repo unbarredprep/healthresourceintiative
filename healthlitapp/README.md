@@ -35,6 +35,7 @@ healthlitapp/
 - Gemini API called only from the Worker
 - HRSA Health Center Data
 - OpenStreetMap, Overpass, and Nominatim public data
+- Zippopotam.us ZIP code lookup
 
 ## Language-Powered Outputs
 
