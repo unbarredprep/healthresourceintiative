@@ -91,6 +91,10 @@ export default {
       return handleHealthOutput(request, env);
     }
 
+    if (url.pathname === '/api/health-output/status') {
+      return handleHealthOutputStatus(request, env);
+    }
+
     return env.ASSETS.fetch(request);
   }
 };
@@ -165,7 +169,8 @@ async function handleHealthOutput(request, env) {
     return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
   }
 
-  if (!env.GEMINI_API_KEY) {
+  const geminiApiKey = getGeminiApiKey(env);
+  if (!geminiApiKey) {
     return jsonResponse({
       error: 'AI_NOT_CONFIGURED',
       message: AI_NOT_CONFIGURED_MESSAGE
@@ -198,7 +203,8 @@ async function handleHealthOutput(request, env) {
       input,
       selectedLanguage,
       taskType,
-      env
+      env,
+      geminiApiKey
     });
 
     return jsonResponse({
@@ -218,12 +224,35 @@ async function handleHealthOutput(request, env) {
   }
 }
 
-async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env }) {
+function handleHealthOutputStatus(request, env) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders()
+    });
+  }
+
+  if (request.method !== 'GET') {
+    return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
+  }
+
+  return jsonResponse({
+    configured: Boolean(getGeminiApiKey(env)),
+    expectedSecretName: 'GEMINI_API_KEY',
+    model: env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+    bindings: {
+      hasGeminiApiKey: Boolean(getGeminiApiKey(env)),
+      hasGeminiModel: Boolean(String(env.GEMINI_MODEL || '').trim())
+    }
+  }, 200, { 'Cache-Control': 'no-store' });
+}
+
+async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env, geminiApiKey }) {
   const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const response = await fetch(`${GEMINI_GENERATE_CONTENT_BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: {
-      'x-goog-api-key': env.GEMINI_API_KEY,
+      'x-goog-api-key': geminiApiKey,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -252,6 +281,10 @@ async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType
   const outputText = extractGeminiText(data);
   const parsedOutput = parseJsonOutput(outputText);
   return normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, outputText);
+}
+
+function getGeminiApiKey(env) {
+  return String(env.GEMINI_API_KEY || '').trim();
 }
 
 function buildHealthcareSystemPrompt(selectedLanguage) {
