@@ -1,99 +1,33 @@
 (function attachClearCareI18n(root) {
-  const CACHE_VERSION   = 'v1';
-  const MAX_BATCH_SIZE  = 10;
-  const MAX_STRING_LENGTH = 500;
+  const CACHE_VERSION     = 'v2';
   const TEXT_NODE_FILTER  = root.NodeFilter?.SHOW_TEXT || 4;
-
-  const textOriginals      = new WeakMap();
+  const textOriginals     = new WeakMap();
   const attributeOriginals = new WeakMap();
-  let   originalTitle      = '';
-  let   activeRequestId    = 0;
+  let   originalTitle     = '';
+  let   activeRequestId   = 0;
+  let   isTranslating     = false;
 
   const attributeNames = ['placeholder', 'aria-label', 'title', 'alt'];
   const skippedTags    = new Set(['SCRIPT','STYLE','NOSCRIPT','SVG','PATH','META','LINK']);
 
-  /* ── Core translations for UI chrome (no API needed) ── */
+  /* ── Hardcoded UI chrome translations (instant, no API) ── */
   const coreTranslations = {
-    es: {
-      'Choose your language': 'Elige tu idioma',
-      'Choose the language you want to use. ClearCare will remember it on this device.': 'Elige el idioma que quieres usar. ClearCare lo recordará en este dispositivo.',
-      'Done': 'Listo',
-      'Translating page...': 'Traduciendo la página...',
-      'Could not translate the page right now. Please try again.': 'No pudimos traducir la página ahora. Inténtalo de nuevo.'
-    },
-    ne: {
-      'Choose your language': 'आफ्नो भाषा छान्नुहोस्',
-      'Done': 'सकियो',
-      'Translating page...': 'पृष्ठ अनुवाद हुँदैछ...'
-    },
-    hi: {
-      'Choose your language': 'अपनी भाषा चुनें',
-      'Done': 'हो गया',
-      'Translating page...': 'पेज का अनुवाद हो रहा है...'
-    },
-    ar: {
-      'Choose your language': 'اختر لغتك',
-      'Done': 'تم',
-      'Translating page...': 'جارٍ ترجمة الصفحة...'
-    },
-    vi: {
-      'Choose your language': 'Chọn ngôn ngữ của bạn',
-      'Done': 'Xong',
-      'Translating page...': 'Đang dịch trang...'
-    },
-    zh: {
-      'Choose your language': '选择你的语言',
-      'Done': '完成',
-      'Translating page...': '正在翻译页面...'
-    },
-    fr: {
-      'Choose your language': 'Choisissez votre langue',
-      'Done': 'Terminé',
-      'Translating page...': 'Traduction de la page...'
-    },
-    ur: {
-      'Choose your language': 'اپنی زبان منتخب کریں',
-      'Done': 'مکمل',
-      'Translating page...': 'صفحہ ترجمہ ہو رہا ہے...'
-    },
-    ko: {
-      'Choose your language': '언어를 선택하세요',
-      'Done': '완료',
-      'Translating page...': '페이지를 번역하는 중...'
-    }
+    es: { 'Choose your language': 'Elige tu idioma', 'Done': 'Listo' },
+    hi: { 'Choose your language': 'अपनी भाषा चुनें', 'Done': 'हो गया' },
+    ne: { 'Choose your language': 'आफ्नो भाषा छान्नुहोस्', 'Done': 'सकियो' },
+    ar: { 'Choose your language': 'اختر لغتك', 'Done': 'تم' },
+    vi: { 'Choose your language': 'Chọn ngôn ngữ của bạn', 'Done': 'Xong' },
+    zh: { 'Choose your language': '选择你的语言', 'Done': '完成' },
+    fr: { 'Choose your language': 'Choisissez votre langue', 'Done': 'Terminé' },
+    ur: { 'Choose your language': 'اپنی زبان منتخب کریں', 'Done': 'مکمل' },
+    ko: { 'Choose your language': '언어를 선택하세요', 'Done': '완료' }
   };
 
-  /* ── MyMemory free API — no key needed ── */
-  async function fetchTranslationFromAPI(text, targetCode) {
-    try {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetCode}`;
-      const res  = await fetch(url);
-      const data = await res.json();
-      const translated = data?.responseData?.translatedText;
-      // MyMemory returns the original text when it fails — detect and discard
-      if (!translated || translated.toLowerCase() === text.toLowerCase()) return null;
-      return translated;
-    } catch {
-      return null;
-    }
-  }
-
-  async function requestTranslations(language, strings) {
-    const results = {};
-    // Translate in small batches with a short delay to respect rate limits
-    for (const text of strings) {
-      const translated = await fetchTranslationFromAPI(text, language.code);
-      if (translated) results[text] = translated;
-      await new Promise(r => setTimeout(r, 120)); // 120ms between requests
-    }
-    return results;
-  }
-
-  /* ── DOM helpers (unchanged from original) ── */
+  /* ── Helpers ── */
   function getLanguageTools() {
     return root.ClearCareLanguages || {
-      defaultLanguage: { code: 'en', label: 'English', nativeLabel: 'English', instructionName: 'English', dir: 'ltr' },
-      getStoredLanguage: () => ({ code: 'en', label: 'English', nativeLabel: 'English', instructionName: 'English', dir: 'ltr' })
+      defaultLanguage: { code: 'en', label: 'English', instructionName: 'English', dir: 'ltr' },
+      getStoredLanguage: () => ({ code: 'en', label: 'English', instructionName: 'English', dir: 'ltr' })
     };
   }
 
@@ -101,17 +35,15 @@
     return String(value || '').replace(/\s+/g, ' ').trim();
   }
 
-  function shouldSkipElement(element) {
-    return !element
-      || skippedTags.has(element.tagName)
-      || element.closest('[data-no-translate], [data-i18n-skip], .nav-logo, .logo-text');
+  function shouldSkipElement(el) {
+    return !el
+      || skippedTags.has(el.tagName)
+      || el.closest('[data-no-translate],[data-i18n-skip],.nav-logo,.logo-text,.logo-mark');
   }
 
-  function shouldTranslateString(value) {
-    const text = normalizeText(value);
-    return text.length > 1
-      && text.length <= MAX_STRING_LENGTH
-      && /[A-Za-z]/.test(text); // only translate strings with Latin characters (English)
+  function shouldTranslate(text) {
+    const t = normalizeText(text);
+    return t.length > 1 && t.length < 1000 && /[A-Za-z]/.test(t);
   }
 
   function getTextNodes(container) {
@@ -119,7 +51,7 @@
     const walker = document.createTreeWalker(container, TEXT_NODE_FILTER, {
       acceptNode(node) {
         if (shouldSkipElement(node.parentElement)) return NodeFilter.FILTER_REJECT;
-        if (!shouldTranslateString(node.nodeValue))  return NodeFilter.FILTER_REJECT;
+        if (!shouldTranslate(node.nodeValue))       return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -127,125 +59,174 @@
     return nodes;
   }
 
-  function rememberTextNode(node, refresh) {
-    if (refresh || !textOriginals.has(node)) textOriginals.set(node, node.nodeValue);
-  }
-
-  function rememberAttributes(element, refresh) {
-    let originals = attributeOriginals.get(element);
-    if (!originals || refresh) { originals = {}; attributeOriginals.set(element, originals); }
-    for (const attr of attributeNames) {
-      if (element.hasAttribute(attr) && (refresh || originals[attr] === undefined)) {
-        originals[attr] = element.getAttribute(attr);
-      }
-    }
-  }
-
-  function collectOriginalStrings(container, options = {}) {
+  /* ── Collect all English strings from the page ── */
+  function collectStrings(container) {
     const strings = new Set();
+
     getTextNodes(container).forEach(node => {
-      rememberTextNode(node, options.refreshOriginals);
+      if (!textOriginals.has(node)) textOriginals.set(node, node.nodeValue);
       const original = normalizeText(textOriginals.get(node));
-      if (shouldTranslateString(original)) strings.add(original);
+      if (shouldTranslate(original)) strings.add(original);
     });
+
     container.querySelectorAll(attributeNames.map(n => `[${n}]`).join(',')).forEach(el => {
       if (shouldSkipElement(el)) return;
-      rememberAttributes(el, options.refreshOriginals);
+      if (!attributeOriginals.has(el)) {
+        const originals = {};
+        for (const attr of attributeNames) {
+          if (el.hasAttribute(attr)) originals[attr] = el.getAttribute(attr);
+        }
+        attributeOriginals.set(el, originals);
+      }
       const originals = attributeOriginals.get(el) || {};
       for (const value of Object.values(originals)) {
-        if (shouldTranslateString(value)) strings.add(normalizeText(value));
+        if (shouldTranslate(value)) strings.add(normalizeText(value));
       }
     });
+
     if (!originalTitle) originalTitle = document.title;
-    if (shouldTranslateString(originalTitle)) strings.add(normalizeText(originalTitle));
+    if (shouldTranslate(originalTitle)) strings.add(normalizeText(originalTitle));
+
     return [...strings];
   }
 
-  function translatedValue(languageCode, text, cache) {
-    if (languageCode === 'en') return text;
-    return coreTranslations[languageCode]?.[text] || cache[text] || text;
-  }
+  /* ── Apply a translation map to the DOM ── */
+  function applyTranslations(container, langCode, cache) {
+    const core = coreTranslations[langCode] || {};
 
-  function replaceTextPreservingSpace(original, translated) {
-    const leading  = original.match(/^\s*/)?.[0]  || '';
-    const trailing = original.match(/\s*$/)?.[0]  || '';
-    return `${leading}${translated}${trailing}`;
-  }
+    function translated(original) {
+      if (langCode === 'en') return original;
+      return core[original] || cache[original] || original;
+    }
 
-  function applyTranslations(container, languageCode, cache, options = {}) {
     getTextNodes(container).forEach(node => {
-      rememberTextNode(node, options.refreshOriginals);
-      const original   = textOriginals.get(node);
+      const original   = textOriginals.get(node) || node.nodeValue;
       const normalized = normalizeText(original);
-      const translated = translatedValue(languageCode, normalized, cache);
-      node.nodeValue   = replaceTextPreservingSpace(original, translated);
+      const result     = translated(normalized);
+      const leading    = original.match(/^\s*/)?.[0]  || '';
+      const trailing   = original.match(/\s*$/)?.[0]  || '';
+      node.nodeValue   = `${leading}${result}${trailing}`;
     });
 
     container.querySelectorAll(attributeNames.map(n => `[${n}]`).join(',')).forEach(el => {
       if (shouldSkipElement(el)) return;
-      rememberAttributes(el, options.refreshOriginals);
       const originals = attributeOriginals.get(el) || {};
       for (const [attr, original] of Object.entries(originals)) {
-        el.setAttribute(attr, translatedValue(languageCode, normalizeText(original), cache));
+        el.setAttribute(attr, translated(normalizeText(original)));
       }
     });
 
-    if (!originalTitle) originalTitle = document.title;
-    document.title = translatedValue(languageCode, normalizeText(originalTitle), cache);
+    if (originalTitle) {
+      document.title = translated(normalizeText(originalTitle));
+    }
   }
 
   /* ── Cache helpers ── */
-  function getCacheKey(code) { return `clearcare_ui_translations_${CACHE_VERSION}_${code}`; }
-
+  function cacheKey(code) { return `cc_trans_${CACHE_VERSION}_${code}`; }
   function loadCache(code) {
-    try { return JSON.parse(localStorage.getItem(getCacheKey(code)) || '{}') || {}; }
-    catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(cacheKey(code)) || '{}'); } catch { return {}; }
   }
-
   function saveCache(code, cache) {
-    try { localStorage.setItem(getCacheKey(code), JSON.stringify(cache)); } catch { /* ok */ }
+    try { localStorage.setItem(cacheKey(code), JSON.stringify(cache)); } catch {}
   }
 
-  /* ── Main translate function ── */
+  /* ── Groq translation — one API call for all strings ── */
+  async function translateViaGroq(strings, language) {
+    const groqKey = root.CONFIG?.GROQ_KEY;
+    if (!groqKey || groqKey.includes('paste')) {
+      console.warn('ClearCare: GROQ_KEY not set in config.js — translation skipped.');
+      return {};
+    }
+
+    const systemPrompt = `You are a translation engine.
+The user will give you a JSON array of English strings.
+Translate every string into ${language.instructionName}.
+Return ONLY a valid JSON object where each key is the original English string
+and each value is the ${language.instructionName} translation.
+Preserve capitalization style. Do not add explanations. No markdown.`;
+
+    const userMessage = JSON.stringify(strings);
+
+    const res  = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model:       'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userMessage  }
+        ],
+        temperature: 0.1,
+        max_tokens:  4000
+      })
+    });
+
+    const data    = await res.json();
+    const rawText = data.choices?.[0]?.message?.content || '';
+    const cleaned = rawText.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const start   = cleaned.indexOf('{');
+    const end     = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1) return {};
+    return JSON.parse(cleaned.substring(start, end + 1));
+  }
+
+  /* ── Main entry point ── */
   async function translateElement(container = document.body, options = {}) {
-    const language     = options.language || getLanguageTools().getStoredLanguage(localStorage);
-    const languageCode = language.code;
-    const requestId    = ++activeRequestId;
+    const language  = options.language || getLanguageTools().getStoredLanguage(localStorage);
+    const langCode  = language.code;
+    const requestId = ++activeRequestId;
 
     if (!container) return;
 
-    document.documentElement.lang = languageCode;
+    document.documentElement.lang = langCode;
     document.documentElement.dir  = language.dir || 'ltr';
 
-    const strings = collectOriginalStrings(container, options);
-    const cache   = loadCache(languageCode);
+    // English — restore originals and stop
+    if (langCode === 'en') {
+      applyTranslations(container, 'en', {});
+      return;
+    }
 
-    // Apply what we already have (core + cached) immediately
-    applyTranslations(container, languageCode, cache, options);
+    // Load cache and apply instantly what we already have
+    const cache = loadCache(langCode);
+    applyTranslations(container, langCode, cache);
 
-    if (languageCode === 'en') return;
+    // Find strings not yet translated
+    const strings = collectStrings(container);
+    const core    = coreTranslations[langCode] || {};
+    const missing = strings.filter(s => !cache[s] && !core[s]);
 
-    // Find strings not yet in cache or core translations
-    const core    = coreTranslations[languageCode] || {};
-    const missing = strings.filter(text => !cache[text] && !core[text]);
-    if (!missing.length) return;
+    if (!missing.length) return; // everything already cached
+
+    if (isTranslating) return; // don't stack calls
+    isTranslating = true;
 
     try {
-      // Translate in batches via MyMemory
-      for (let i = 0; i < missing.length; i += MAX_BATCH_SIZE) {
-        if (requestId !== activeRequestId) return; // user switched language, abort
-        const batch        = missing.slice(i, i + MAX_BATCH_SIZE);
-        const translations = await requestTranslations(language, batch);
+      // Split into chunks of 60 strings to stay within token limits
+      const chunkSize = 60;
+      for (let i = 0; i < missing.length; i += chunkSize) {
+        if (requestId !== activeRequestId) break; // user switched language
+        const batch        = missing.slice(i, i + chunkSize);
+        const translations = await translateViaGroq(batch, language);
+
         Object.entries(translations).forEach(([source, translated]) => {
-          const key = normalizeText(source);
-          const val = normalizeText(translated);
-          if (key && val) cache[key] = val;
+          const k = normalizeText(source);
+          const v = normalizeText(translated);
+          if (k && v && k !== v) cache[k] = v;
         });
-        saveCache(languageCode, cache);
-        applyTranslations(container, languageCode, cache, options);
+
+        saveCache(langCode, cache);
+        if (requestId === activeRequestId) {
+          applyTranslations(container, langCode, cache);
+        }
       }
-    } catch (error) {
-      console.warn('ClearCare translation error:', error.message);
+    } catch (err) {
+      console.warn('ClearCare translation error:', err.message);
+    } finally {
+      isTranslating = false;
     }
   }
 
@@ -253,6 +234,6 @@
     return translateElement(document.body, { language });
   }
 
-  root.ClearCareI18n = { translatePage, translateElement, collectOriginalStrings };
+  root.ClearCareI18n = { translatePage, translateElement, collectStrings };
 
 })(window);
