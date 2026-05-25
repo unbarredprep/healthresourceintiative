@@ -1,7 +1,6 @@
 /* ============================================================
    CLEARCARE — CONNECT PAGE JS
-   Direct calls to HRSA (free, no key) + Google Places API
-   Everything else preserved from original partner code
+   OpenStreetMap Overpass API (free, no key, no CORS) + Google Places
    ============================================================ */
 
 const SAVED_STORAGE_KEY = 'clearcare_saved_resources';
@@ -23,14 +22,14 @@ let elements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
   elements = {
-    form:                document.getElementById('connectSearchForm'),
-    input:               document.getElementById('locationInput'),
-    useLocationButton:   document.getElementById('useLocationButton'),
-    resetFiltersButton:  document.getElementById('resetFiltersButton'),
-    resultsArea:         document.getElementById('resultsArea'),
-    resultsSummary:      document.getElementById('resultsSummary'),
-    savedCareOptions:    document.getElementById('savedCareOptions'),
-    locationMessage:     document.getElementById('locationMessage')
+    form:               document.getElementById('connectSearchForm'),
+    input:              document.getElementById('locationInput'),
+    useLocationButton:  document.getElementById('useLocationButton'),
+    resetFiltersButton: document.getElementById('resetFiltersButton'),
+    resultsArea:        document.getElementById('resultsArea'),
+    resultsSummary:     document.getElementById('resultsSummary'),
+    savedCareOptions:   document.getElementById('savedCareOptions'),
+    locationMessage:    document.getElementById('locationMessage')
   };
 
   elements.form.addEventListener('submit', handleSearchSubmit);
@@ -115,7 +114,10 @@ async function performSearch() {
     });
 
     state.latestResults = results;
-    renderResults({ results, location: { label: state.currentSearch.locationLabel || state.currentSearch.locationQuery } });
+    renderResults({
+      results,
+      location: { label: state.currentSearch.locationLabel || state.currentSearch.locationQuery }
+    });
 
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -127,12 +129,11 @@ async function performSearch() {
 }
 
 /* ============================================================
-   SEARCH — replaces the /api/connect/search backend call
-   Uses HRSA (free, no key) + Google Places API
+   SEARCH
    ============================================================ */
 async function searchNearbyCare({ locationQuery, lat, lng, locationLabel, radiusMiles, careType, signal }) {
 
-  // Step 1: If we have a text query, geocode it to lat/lng
+  // Geocode text query to lat/lng if needed
   if (locationQuery && (!lat || !lng)) {
     const coords = await geocodeLocation(locationQuery, signal);
     if (!coords) {
@@ -146,84 +147,122 @@ async function searchNearbyCare({ locationQuery, lat, lng, locationLabel, radius
 
   const radiusMeters = Math.round((radiusMiles || 25) * 1609.344);
 
-  // Step 2: Fetch HRSA + Places in parallel
-  const [hrsaResults, placesResults] = await Promise.allSettled([
-    fetchHRSAClinics(lat, lng, radiusMiles, careType, signal),
+  const [osmResults, placesResults] = await Promise.allSettled([
+    fetchOSMClinics(lat, lng, radiusMeters, careType, signal),
     fetchGooglePlaces(lat, lng, radiusMeters, careType, signal)
   ]);
 
   const combined = [
-    ...(hrsaResults.status  === 'fulfilled' ? hrsaResults.value  : []),
+    ...(osmResults.status    === 'fulfilled' ? osmResults.value    : []),
     ...(placesResults.status === 'fulfilled' ? placesResults.value : [])
   ];
 
-  // Sort by distance
   combined.sort((a, b) => (a.distanceMiles || 999) - (b.distanceMiles || 999));
-
   return combined;
 }
 
-/* ── Geocode a text address using Google Geocoding API ── */
+/* ── Geocode using Nominatim (free) or Google if key available ── */
 async function geocodeLocation(query, signal) {
   const placesKey = window.CONFIG?.PLACES_KEY;
-  if (!placesKey) {
-    // Fallback: try a free geocoder
+
+  if (placesKey) {
     try {
-      const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, { signal });
+      const res  = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${placesKey}`,
+        { signal }
+      );
       const data = await res.json();
-      if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    } catch { return null; }
-    return null;
+      if (data.results?.[0]) {
+        const loc = data.results[0].geometry.location;
+        return { lat: loc.lat, lng: loc.lng };
+      }
+    } catch { /* fall through to Nominatim */ }
   }
 
+  // Free fallback — no key needed
   try {
     const res  = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${placesKey}`,
-      { signal }
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+      { signal, headers: { 'Accept-Language': 'en' } }
     );
     const data = await res.json();
-    if (data.results?.[0]) {
-      const loc = data.results[0].geometry.location;
-      return { lat: loc.lat, lng: loc.lng };
-    }
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch { return null; }
+
   return null;
 }
 
-/* ── HRSA: Federally Qualified Health Centers (free, no key) ── */
-async function fetchHRSAClinics(lat, lng, radiusMiles, careType, signal) {
-  if (careType && careType !== 'all' && careType !== 'fqhc' && careType !== 'free') return [];
-
+/* ── OpenStreetMap Overpass API — no CORS, free, no key ── */
+async function fetchOSMClinics(lat, lng, radiusMeters, careType, signal) {
   try {
-    const res  = await fetch(
-      `https://findahealthcenter.hrsa.gov/api/search?latitude=${lat}&longitude=${lng}&radius=${radiusMiles || 25}&pageSize=8`,
-      { signal }
-    );
+    const amenityPattern = careType === 'pharmacy'  ? 'pharmacy'
+                         : careType === 'urgent'    ? 'clinic|hospital'
+                         : careType === 'mental'    ? 'clinic'
+                         : careType === 'hospitals' ? 'hospital'
+                         : 'clinic|hospital|health_centre|doctors|pharmacy';
+
+    const query = `
+      [out:json][timeout:25];
+      (
+        node["amenity"~"${amenityPattern}"](around:${radiusMeters},${lat},${lng});
+        way["amenity"~"${amenityPattern}"](around:${radiusMeters},${lat},${lng});
+      );
+      out center 12;
+    `;
+
+    const res  = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body:   query,
+      signal
+    });
     const data = await res.json();
 
-    return (data.results || []).map((c, i) => ({
-      id:           `hrsa-${c.objectId || i}`,
-      name:         c.site_name || c.health_center_name || 'Community Health Center',
-      type:         'FQHC / Free Clinic',
-      category:     'Federally Qualified Health Center',
-      address:      [c.site_address, c.site_city, c.site_state_abbreviation, c.site_postal_code].filter(Boolean).join(', '),
-      phone:        c.site_phone || '',
-      hoursText:    c.hours_of_operation || 'Call for hours',
-      distanceMiles: haversineDistance(lat, lng, parseFloat(c.latitude), parseFloat(c.longitude)),
-      lat:          parseFloat(c.latitude),
-      lng:          parseFloat(c.longitude),
-      source:       'HRSA',
-      disclaimer:   'Services and hours subject to change. Call ahead to confirm.',
-    }));
+    return (data.elements || []).map((el, i) => {
+      const elLat = el.lat || el.center?.lat;
+      const elLng = el.lon  || el.center?.lon;
+      const tags  = el.tags || {};
+
+      return {
+        id:            `osm-${el.id || i}`,
+        name:          tags.name || tags['name:en'] || 'Community Health Facility',
+        type:          formatOSMType(tags.amenity),
+        category:      formatOSMType(tags.amenity),
+        address:       [
+                         tags['addr:housenumber'],
+                         tags['addr:street'],
+                         tags['addr:city'],
+                         tags['addr:state']
+                       ].filter(Boolean).join(' ') || 'See directions for address',
+        phone:         tags.phone || tags['contact:phone'] || '',
+        website:       tags.website || tags['contact:website'] || '',
+        hoursText:     tags.opening_hours || 'Call for hours',
+        distanceMiles: haversineDistance(lat, lng, elLat, elLng),
+        lat:           elLat,
+        lng:           elLng,
+        source:        'OpenStreetMap',
+        disclaimer:    'Data from OpenStreetMap contributors. Call ahead to confirm services and hours.',
+      };
+    });
+
   } catch {
     return [];
   }
 }
 
-/* ── Google Places: urgent care, clinics, pharmacies ── */
+function formatOSMType(amenity) {
+  if (!amenity) return 'Care Resource';
+  if (amenity.includes('pharmacy'))      return 'Pharmacy';
+  if (amenity.includes('hospital'))      return 'Hospital';
+  if (amenity.includes('health_centre')) return 'Health Centre';
+  if (amenity.includes('clinic'))        return 'Health Clinic';
+  if (amenity.includes('doctors'))       return 'Medical Office';
+  return 'Care Resource';
+}
+
+/* ── Google Places API — only runs if PLACES_KEY is set ── */
 async function fetchGooglePlaces(lat, lng, radiusMeters, careType, signal) {
   const placesKey = window.CONFIG?.PLACES_KEY;
-  if (!placesKey) return []; // skip if no key
+  if (!placesKey) return [];
 
   const typeMap = {
     urgent:   'urgent_care',
@@ -242,21 +281,22 @@ async function fetchGooglePlaces(lat, lng, radiusMeters, careType, signal) {
     const data = await res.json();
 
     return (data.results || []).slice(0, 6).map((p, i) => ({
-      id:           `places-${p.place_id || i}`,
-      name:         p.name,
-      type:         formatPlaceType(p.types),
-      category:     formatPlaceType(p.types),
-      address:      p.vicinity || 'Address unavailable',
-      phone:        '',
-      hoursText:    p.opening_hours?.open_now === true  ? 'Open now'
-                  : p.opening_hours?.open_now === false ? 'Closed now'
-                  : 'Call for hours',
+      id:            `places-${p.place_id || i}`,
+      name:          p.name,
+      type:          formatPlaceType(p.types),
+      category:      formatPlaceType(p.types),
+      address:       p.vicinity || 'Address unavailable',
+      phone:         '',
+      website:       '',
+      hoursText:     p.opening_hours?.open_now === true  ? 'Open now'
+                   : p.opening_hours?.open_now === false ? 'Closed now'
+                   : 'Call for hours',
       distanceMiles: haversineDistance(lat, lng, p.geometry.location.lat, p.geometry.location.lng),
-      lat:          p.geometry.location.lat,
-      lng:          p.geometry.location.lng,
-      mapsUrl:      `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
-      source:       'Google Places',
-      disclaimer:   'Call ahead to confirm services, cost, and hours.',
+      lat:           p.geometry.location.lat,
+      lng:           p.geometry.location.lng,
+      mapsUrl:       `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
+      source:        'Google Places',
+      disclaimer:    'Call ahead to confirm services, cost, and hours.',
     }));
   } catch {
     return [];
@@ -264,29 +304,28 @@ async function fetchGooglePlaces(lat, lng, radiusMeters, careType, signal) {
 }
 
 function formatPlaceType(types = []) {
-  if (types.includes('pharmacy'))    return 'Pharmacy';
-  if (types.includes('hospital'))    return 'Hospital';
-  if (types.includes('doctor'))      return 'Medical Office';
-  if (types.includes('health'))      return 'Health Clinic';
+  if (types.includes('pharmacy'))  return 'Pharmacy';
+  if (types.includes('hospital'))  return 'Hospital';
+  if (types.includes('doctor'))    return 'Medical Office';
+  if (types.includes('health'))    return 'Health Clinic';
   return 'Care Resource';
 }
 
-/* ── Haversine distance formula ── */
+/* ── Haversine distance ── */
 function haversineDistance(lat1, lon1, lat2, lon2) {
   if (!lat2 || !lon2) return null;
-  const R    = 3958.8; // miles
+  const R    = 3958.8;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a    = Math.sin(dLat/2) ** 2
-             + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) ** 2;
+             + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180)
+             * Math.sin(dLon/2) ** 2;
   return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1));
 }
 
 /* ============================================================
-   All rendering + UI functions below are unchanged from
-   your partner's original code
+   FILTERS
    ============================================================ */
-
 function updateFilter(button) {
   const filterName = button.dataset.filter;
   const rawValue   = button.dataset.value;
@@ -316,6 +355,9 @@ function updateFilterButtons(filterName, activeValue) {
   });
 }
 
+/* ============================================================
+   RENDERING
+   ============================================================ */
 function renderInitialState() {
   state.latestResults = [];
   elements.resultsSummary.textContent = '';
@@ -364,7 +406,7 @@ function renderLocationNotFound() {
   elements.resultsSummary.textContent = '';
   elements.resultsArea.innerHTML = `
     <div class="connect-state connect-state-error" role="alert">
-      <strong>We could not find that location. Try entering a ZIP code, city, or full address.</strong>
+      <strong>We could not find that location. Try a ZIP code, city, or full address.</strong>
     </div>
   `;
   translateConnectElement(elements.resultsArea);
@@ -393,12 +435,12 @@ function renderGeolocationDenied() {
 }
 
 function renderResourceCard(resource) {
-  const isSaved        = state.savedResources.has(resource.id);
-  const directionsUrl  = resource.directionsUrl || resource.mapsUrl || buildGoogleMapsDirectionsUrl(resource);
-  const phoneMarkup    = resource.phone
+  const isSaved       = state.savedResources.has(resource.id);
+  const directionsUrl = resource.directionsUrl || resource.mapsUrl || buildGoogleMapsDirectionsUrl(resource);
+  const phoneMarkup   = resource.phone
     ? `<a class="btn btn-outline" href="${createTelUrl(resource.phone)}">Call ${escapeHTML(resource.phone)}</a>`
     : '<span class="connect-action-note">Phone not listed</span>';
-  const websiteMarkup  = resource.website
+  const websiteMarkup = resource.website
     ? `<a class="btn btn-outline" href="${escapeAttribute(resource.website)}" target="_blank" rel="noopener noreferrer">Website</a>`
     : '';
 
@@ -435,6 +477,9 @@ function renderResourceCard(resource) {
   `;
 }
 
+/* ============================================================
+   SAVED RESOURCES
+   ============================================================ */
 function handleResultAction(event) {
   const saveButton = event.target.closest('[data-save-id]');
   if (!saveButton) return;
@@ -453,10 +498,11 @@ function handleSavedAction(event) {
 function saveResource(resource) {
   state.savedResources.set(resource.id, {
     id: resource.id, name: resource.name, type: resource.type,
-    category: resource.category, address: resource.address, phone: resource.phone,
-    website: resource.website, directionsUrl: resource.directionsUrl,
-    mapsUrl: resource.mapsUrl, hoursText: resource.hoursText,
-    source: resource.source, disclaimer: resource.disclaimer
+    category: resource.category, address: resource.address,
+    phone: resource.phone, website: resource.website,
+    directionsUrl: resource.directionsUrl, mapsUrl: resource.mapsUrl,
+    hoursText: resource.hoursText, source: resource.source,
+    disclaimer: resource.disclaimer
   });
   persistSavedResources();
   renderSavedCare();
@@ -472,10 +518,7 @@ function removeSavedResource(id) {
 
 function rerenderCurrentCards() {
   if (!state.latestResults.length) return;
-  const setupState = elements.resultsArea.querySelector('.connect-setup-state');
-  elements.resultsArea.innerHTML = setupState
-    ? `${setupState.outerHTML}${state.latestResults.map(renderResourceCard).join('')}`
-    : state.latestResults.map(renderResourceCard).join('');
+  elements.resultsArea.innerHTML = state.latestResults.map(renderResourceCard).join('');
   translateConnectElement(elements.resultsArea);
 }
 
@@ -490,7 +533,7 @@ function renderSavedCare() {
     <div class="connect-saved-item">
       <div>
         <strong data-no-translate>${escapeHTML(resource.name)}</strong>
-        <span data-no-translate>${escapeHTML(resource.type || 'Care resource')} - ${escapeHTML(resource.phone || 'Phone not listed')}</span>
+        <span data-no-translate>${escapeHTML(resource.type || 'Care resource')} — ${escapeHTML(resource.phone || 'Phone not listed')}</span>
       </div>
       <button type="button" class="connect-remove-saved" data-remove-saved="${escapeAttribute(resource.id)}"
         aria-label="Remove ${escapeAttribute(resource.name)} from saved care options">Remove</button>
@@ -503,9 +546,7 @@ function loadSavedResources() {
   try {
     const saved = JSON.parse(localStorage.getItem(SAVED_STORAGE_KEY) || '[]');
     if (!Array.isArray(saved)) return new Map();
-    return new Map(
-      saved.filter(r => r && typeof r === 'object' && r.id).map(r => [r.id, r])
-    );
+    return new Map(saved.filter(r => r?.id).map(r => [r.id, r]));
   } catch { return new Map(); }
 }
 
@@ -513,6 +554,9 @@ function persistSavedResources() {
   localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify([...state.savedResources.values()]));
 }
 
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
 function setLocationButtonLoading(isLoading) {
   elements.useLocationButton.disabled = isLoading;
   elements.useLocationButton.setAttribute('aria-busy', String(isLoading));
@@ -537,8 +581,8 @@ function clearMessage() {
 
 function getLocationSuccessMessage(accuracyMeters) {
   if (!accuracyMeters) return 'Using your browser location to search nearby care options.';
-  const accuracyMiles = accuracyMeters / 1609.344;
-  if (accuracyMiles >= 1) return `Using your browser location. Distances may be off by about ${accuracyMiles.toFixed(1)} miles.`;
+  const miles = accuracyMeters / 1609.344;
+  if (miles >= 1) return `Using your browser location. Distances may be off by about ${miles.toFixed(1)} miles.`;
   return 'Using your browser location to search nearby care options.';
 }
 
@@ -559,12 +603,12 @@ function formatDistance(distance) {
 }
 
 function getDotClass(type) {
-  const normalized = String(type || '').toLowerCase();
-  if (normalized.includes('pharmacy'))              return 'dot-pharmacy';
-  if (normalized.includes('urgent'))                return 'dot-urgent';
-  if (normalized.includes('hospital'))              return 'dot-fqhc';
-  if (normalized.includes('mental'))                return 'dot-mental';
-  if (normalized.includes('free') || normalized.includes('fqhc')) return 'dot-free-clinic';
+  const t = String(type || '').toLowerCase();
+  if (t.includes('pharmacy'))                    return 'dot-pharmacy';
+  if (t.includes('urgent'))                      return 'dot-urgent';
+  if (t.includes('hospital'))                    return 'dot-fqhc';
+  if (t.includes('mental'))                      return 'dot-mental';
+  if (t.includes('free') || t.includes('fqhc')) return 'dot-free-clinic';
   return 'dot-telehealth';
 }
 
