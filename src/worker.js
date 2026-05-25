@@ -334,7 +334,7 @@ async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType
       contents: buildGeminiContents(input, selectedLanguage, taskType),
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: 1800,
+        maxOutputTokens: 4000,
         responseMimeType: 'application/json'
       }
     })
@@ -590,14 +590,23 @@ function parseJsonOutput(outputText) {
   try {
     return JSON.parse(cleaned);
   } catch (error) {
-    return null;
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace <= firstBrace) return null;
+
+    try {
+      return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+    } catch (nestedError) {
+      return null;
+    }
   }
 }
 
 function normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, rawText) {
+  const rawFallback = safeRawHealthText(rawText);
   if (taskType === 'prepare') {
     return {
-      appointmentSummary: stringField(parsedOutput?.appointmentSummary, rawText),
+      appointmentSummary: stringField(parsedOutput?.appointmentSummary, rawFallback),
       topQuestionsToAsk: arrayField(parsedOutput?.topQuestionsToAsk),
       symptomsDetailsToMention: arrayField(parsedOutput?.symptomsDetailsToMention),
       medicationsDocumentsToBring: arrayField(parsedOutput?.medicationsDocumentsToBring),
@@ -607,7 +616,7 @@ function normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, rawText
   }
 
   return {
-    simpleSummary: stringField(parsedOutput?.simpleSummary, rawText),
+    simpleSummary: stringField(parsedOutput?.simpleSummary, rawFallback),
     whatThisMightMean: stringField(parsedOutput?.whatThisMightMean, ''),
     importantInstructions: arrayField(parsedOutput?.importantInstructions),
     questionsToAskDoctor: arrayField(parsedOutput?.questionsToAskDoctor),
@@ -619,6 +628,13 @@ function normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, rawText
 function stringField(value, fallback) {
   const text = String(value || '').trim();
   return text || fallback || '';
+}
+
+function safeRawHealthText(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (text.startsWith('{') || text.startsWith('[')) return '';
+  return text;
 }
 
 function arrayField(value) {
