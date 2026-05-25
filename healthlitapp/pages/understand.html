@@ -58,9 +58,21 @@
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFile(this)" />
     </div>
 
-    <p style="text-align:center;font-size:13px;color:var(--gray-500);margin:16px 0 48px;">Or take a photo with your phone camera</p>
+    <p style="text-align:center;font-size:13px;color:var(--gray-500);margin:16px 0 24px;">You can also paste text from a document below. ClearCare sends it to the secure Worker only to generate your explanation.</p>
 
-    <!-- PLACEHOLDER RESULT (will be populated by AI in production) -->
+    <div class="result-card document-input-card">
+      <div class="result-section" style="margin-bottom:18px;">
+        <div class="result-section-label">Document text</div>
+        <label class="form-label" for="documentTextInput">Paste medical document text</label>
+        <textarea class="form-textarea" id="documentTextInput" rows="8" placeholder="Paste discharge instructions, lab notes, prescription directions, or other medical text here."></textarea>
+        <p class="form-helper">Do not use ClearCare for emergencies. If this is urgent, call 911 or local emergency services.</p>
+      </div>
+      <div class="document-input-actions">
+        <button class="btn btn-primary btn-lg" type="button" id="generateExplanationButton" onclick="generateExplanationFromText()">Generate explanation</button>
+        <span class="inline-status" id="understandStatus" aria-live="polite"></span>
+      </div>
+    </div>
+
     <div class="result-card" id="resultCard" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
         <div>
@@ -74,20 +86,28 @@
       </div>
 
       <div class="result-section">
-        <div class="result-section-label">Plain language summary</div>
+        <div class="result-section-label">Simple summary</div>
         <p id="summaryText">Your document explanation will appear here once the AI processes it.</p>
       </div>
       <div class="result-section">
-        <div class="result-section-label">What this means for you</div>
+        <div class="result-section-label">What this might mean</div>
         <p id="meansText">This section will explain what the document means for your daily life.</p>
       </div>
       <div class="result-section">
-        <div class="result-section-label">Warning signs to watch for</div>
-        <div id="warningsArea"></div>
+        <div class="result-section-label">Important instructions</div>
+        <ul class="health-output-list" id="instructionsList"></ul>
       </div>
       <div class="result-section">
-        <div class="result-section-label">Your next steps</div>
-        <ol id="nextStepsList" style="padding-left:20px;color:var(--gray-700);font-size:15px;line-height:2;"></ol>
+        <div class="result-section-label">Questions to ask a doctor</div>
+        <ul class="health-output-list" id="doctorQuestionsList"></ul>
+      </div>
+      <div class="result-section">
+        <div class="result-section-label">When to seek urgent help</div>
+        <ul class="health-output-list health-output-list-alert" id="urgentHelpList"></ul>
+      </div>
+      <div class="result-section">
+        <div class="result-section-label">Disclaimer</div>
+        <p id="understandDisclaimer">ClearCare is not medical advice and does not diagnose conditions.</p>
       </div>
     </div>
 
@@ -111,8 +131,9 @@
     </div>
   </div>
 
-  <script src="../js/config.js"></script>
-<script src="../js/main.js"></script>
-<script src="../js/understand.js"></script>
+  <script src="../js/languages.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/health-ai.js"></script>
+  <script src="../js/understand.js"></script>
 </body>
 </html>

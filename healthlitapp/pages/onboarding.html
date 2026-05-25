@@ -135,7 +135,7 @@
       <div class="step active" id="step-0">
         <h2>Choose your language</h2>
         <p>Everything will appear in the language you choose.</p>
-        <div class="lang-grid-lg">
+        <div class="lang-grid-lg" id="onboardingLanguageGrid">
           <button class="lang-option-lg active" onclick="selectOption(this,'lang','EN')">🇺🇸 English</button>
           <button class="lang-option-lg" onclick="selectOption(this,'lang','ES')">🇲🇽 Español</button>
           <button class="lang-option-lg" onclick="selectOption(this,'lang','ZH')">🇨🇳 中文</button>
@@ -228,10 +228,25 @@
     </div>
   </div>
 
+  <script src="../js/languages.js"></script>
   <script>
     let currentStep = 0;
     const totalSteps = 4;
-    const prefs = { lang: 'EN', textsize: 'normal', goal: 'explore' };
+    const languageTools = window.ClearCareLanguages;
+    const prefs = {
+      lang: languageTools.getStoredLanguage(localStorage).code,
+      textsize: 'normal',
+      goal: 'explore'
+    };
+
+    function renderOnboardingLanguages() {
+      const grid = document.getElementById('onboardingLanguageGrid');
+      grid.innerHTML = languageTools.languages.map(language => `
+        <button class="lang-option-lg ${language.code === prefs.lang ? 'active' : ''}" type="button" onclick="selectOption(this,'lang','${language.code}')">
+          ${language.label}
+        </button>
+      `).join('');
+    }
 
     function nextStep() {
       if (currentStep < totalSteps - 1) {
@@ -256,9 +271,13 @@
       siblings.forEach(s => s.classList.remove('active'));
       el.classList.add('active');
       prefs[key] = val;
+      if (key === 'lang') {
+        localStorage.setItem(languageTools.STORAGE_KEY, val);
+        localStorage.removeItem(languageTools.LEGACY_STORAGE_KEY);
+      }
     }
     function finishOnboarding() {
-      localStorage.setItem('cc_lang', prefs.lang);
+      localStorage.setItem(languageTools.STORAGE_KEY, prefs.lang);
       localStorage.setItem('cc_textsize', prefs.textsize);
       const goalMap = {
         understand: '../pages/understand.html',
@@ -268,6 +287,8 @@
       };
       window.location.href = goalMap[prefs.goal] || '../index.html';
     }
+
+    renderOnboardingLanguages();
   </script>
 </body>
 </html>

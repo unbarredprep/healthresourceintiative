@@ -1,84 +1,70 @@
-# ClearCare — Health Literacy & Resource Navigation Platform
+# ClearCare - Health Literacy & Resource Navigation Platform
 
-> Congressional App Challenge 2026
+Congressional App Challenge 2026 project for helping people understand medical information, prepare for appointments, and find nearby care resources.
 
-A free, multilingual platform that helps underserved communities understand their medical documents, prepare for appointments, and find free care nearby.
+## Live Site
 
----
+This project is deployed with Cloudflare Workers and Static Assets.
 
-## Live site
+## Folder Structure
 
-Deployed on Vercel — push to `main` branch to deploy automatically.
-
----
-
-## Folder structure
-
-```
+```text
 healthlitapp/
-├── index.html              ← Landing page
-├── vercel.json             ← Vercel deployment config
-├── css/
-│   └── main.css            ← All styles (shared across pages)
-├── js/
-│   ├── main.js             ← Global interactions (nav, modals)
-│   ├── understand.js       ← Understand page logic + AI stub
-│   ├── prepare.js          ← Prepare page logic + AI stub
-│   └── connect.js          ← Connect page logic + API stub
-├── pages/
-│   ├── understand.html     ← Upload & explain documents
-│   ├── prepare.html        ← Appointment prep kit generator
-│   ├── connect.html        ← Find nearby health resources
-│   ├── onboarding.html     ← Language + preference setup
-│   └── about.html          ← About the project
-└── assets/                 ← Images, icons (add as needed)
+  index.html
+  css/main.css
+  js/
+    languages.js
+    main.js
+    health-ai.js
+    understand.js
+    prepare.js
+    connect.js
+  pages/
+    understand.html
+    prepare.html
+    connect.html
+    onboarding.html
+    about.html
+  assets/
 ```
 
----
+## Tech Stack
 
-## Deploy to Vercel
+- Pure HTML, CSS, and vanilla JavaScript
+- Cloudflare Workers with Static Assets
+- OpenAI Responses API called only from the Worker
+- HRSA Health Center Data
+- OpenStreetMap, Overpass, and Nominatim public data
 
-1. Push this folder to a GitHub repository
-2. Go to [vercel.com](https://vercel.com) and import the repo
-3. Framework preset: **Other** (static site)
-4. Root directory: leave as-is
-5. Click Deploy
+## Language-Powered Outputs
 
----
+Understand and Prepare use the Cloudflare Worker route `/api/health-output` to generate plain-language healthcare outputs in the selected language.
 
-## Adding the Gemini API (next step)
+Set the OpenAI key as a Cloudflare secret:
 
-1. Get a free key at [aistudio.google.com](https://aistudio.google.com)
-2. Create a `.env` file (never commit this):
-   ```
-   VITE_GEMINI_KEY=your_key_here
-   ```
-3. Replace the `setTimeout` stubs in `js/understand.js` and `js/prepare.js` with real API calls using the pattern in `js/ai.js` (to be created)
+```powershell
+npx wrangler secret put OPENAI_API_KEY
+```
 
----
+For local Worker development, add the key to `.dev.vars`:
+
+```text
+OPENAI_API_KEY=sk-...
+```
+
+Do not commit `.env`, `.dev.vars`, or API keys. See `../docs/languages.md` for supported languages, setup steps, and manual verification.
 
 ## Pages
 
 | Page | Path | Status |
-|------|------|--------|
-| Landing | `/index.html` | ✅ Built |
-| Understand | `/pages/understand.html` | ✅ Built (AI stub) |
-| Prepare | `/pages/prepare.html` | ✅ Built (AI stub) |
-| Connect | `/pages/connect.html` | ✅ Built (API stub) |
-| Onboarding | `/pages/onboarding.html` | ✅ Built |
-| About | `/pages/about.html` | ✅ Built |
+| --- | --- | --- |
+| Home | `/index.html` | Built |
+| Understand | `/pages/understand.html` | Built with localized AI output |
+| Prepare | `/pages/prepare.html` | Built with localized AI output |
+| Connect | `/pages/connect.html` | Built with public provider search |
+| Onboarding | `/pages/onboarding.html` | Built |
+| About | `/pages/about.html` | Built |
 
----
+## Safety
 
-## Tech stack
-
-- Pure HTML + CSS + Vanilla JS (no build step required)
-- Gemini 2.0 Flash API — free tier, no credit card
-- HRSA Health Center Data — free government data
-- OpenStreetMap / Overpass / Nominatim — public map and provider data
-- Vercel — free hosting
-- Supabase — (future) auth and saved documents
-
----
-
-*Built with care for the people who need it most.*
+ClearCare is not medical advice and does not diagnose or prescribe. Users should contact a licensed clinician for medical decisions and call 911 or local emergency services in an emergency.

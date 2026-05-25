@@ -323,11 +323,25 @@ img { max-width: 100%; display: block; }
 .form-input, .form-select, .form-textarea { width: 100%; background: var(--white); border: 1.5px solid var(--blue-ghost); border-radius: var(--radius-md); padding: 12px 16px; font-family: var(--font-body); font-size: 15px; color: var(--gray-900); transition: border-color 0.15s; outline: none; }
 .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(40,116,208,0.12); }
 .form-textarea { resize: vertical; min-height: 100px; }
+.form-helper { color: var(--gray-500); font-size: 13px; line-height: 1.6; margin-top: 8px; }
 .result-card { background: var(--white); border: 1px solid var(--blue-ghost); border-radius: var(--radius-xl); padding: 36px; box-shadow: var(--shadow-md); }
+.result-card + .result-card { margin-top: 28px; }
 .result-section { margin-bottom: 28px; }
 .result-section:last-child { margin-bottom: 0; }
 .result-section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--blue-mid); margin-bottom: 10px; }
 .result-section p { font-size: 15px; color: var(--gray-700); line-height: 1.7; }
+.document-input-card { margin-bottom: 28px; }
+.document-input-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.inline-status { display: block; color: var(--gray-500); font-size: 14px; line-height: 1.6; margin-top: 12px; }
+.inline-status.error { color: var(--red); }
+.inline-status.success { color: var(--teal); }
+.health-output-list { padding-left: 20px; color: var(--gray-700); font-size: 15px; line-height: 1.9; }
+.health-output-list li { margin-bottom: 6px; }
+.health-output-list-numbered { padding-left: 22px; }
+.health-output-list-alert li { color: #7F1D1D; }
+.health-output-checklist { list-style: none; padding-left: 0; }
+.health-output-checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--blue-ghost); }
+.health-output-checklist li::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--blue-mid); margin-top: 10px; flex-shrink: 0; }
 .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; }
 .filter-pill { background: var(--white); border: 1.5px solid var(--blue-ghost); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--gray-700); cursor: pointer; transition: all 0.15s; }
 .filter-pill:hover   { border-color: var(--blue-mid); color: var(--blue-rich); }

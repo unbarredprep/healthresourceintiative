@@ -1,10 +1,18 @@
+import '../healthlitapp/js/languages.js';
+
 const CENSUS_GEOCODER_URL = 'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress';
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const HRSA_HEALTH_CENTERS_URL = 'https://data.hrsa.gov/HDWAPI3_External/api/v1/GetHealthCentersAroundALocation';
+const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const APP_USER_AGENT = 'ClearCare/1.0 (healthresourceintiative; https://github.com/unbarredprep/healthresourceintiative)';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_RESULTS = 30;
+const MAX_HEALTH_INPUT_CHARS = 12000;
+const MAX_IMAGE_DATA_URL_CHARS = 7000000;
+const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
+const AI_NOT_CONFIGURED_MESSAGE = 'Language-powered explanations are not configured yet. Please add OPENAI_API_KEY as a Cloudflare secret.';
+const LANGUAGE_TOOLS = globalThis.ClearCareLanguages;
 
 const cache = new Map();
 let lastNominatimRequestAt = 0;
@@ -79,6 +87,10 @@ export default {
       return handleConnectSearch(request, env);
     }
 
+    if (url.pathname === '/api/health-output') {
+      return handleHealthOutput(request, env);
+    }
+
     return env.ASSETS.fetch(request);
   }
 };
@@ -139,6 +151,286 @@ async function handleConnectSearch(request, env) {
       message: 'We could not search right now. Please try again.'
     }, 502);
   }
+}
+
+async function handleHealthOutput(request, env) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders()
+    });
+  }
+
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
+  }
+
+  if (!env.OPENAI_API_KEY) {
+    return jsonResponse({
+      error: 'AI_NOT_CONFIGURED',
+      message: AI_NOT_CONFIGURED_MESSAGE
+    }, 503, { 'Cache-Control': 'no-store' });
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch (error) {
+    return jsonResponse({
+      error: 'BAD_REQUEST',
+      message: 'Invalid language generation request.'
+    }, 400, { 'Cache-Control': 'no-store' });
+  }
+
+  try {
+    const taskType = normalizeHealthTaskType(payload.taskType);
+    const selectedLanguage = LANGUAGE_TOOLS.getLanguage(payload.language);
+    const input = normalizeHealthInput(payload.input, taskType);
+
+    if (!input) {
+      return jsonResponse({
+        error: 'BAD_REQUEST',
+        message: 'Add document text, a supported image, or appointment details first.'
+      }, 400, { 'Cache-Control': 'no-store' });
+    }
+
+    const output = await generateLocalizedHealthOutput({
+      input,
+      selectedLanguage,
+      taskType,
+      env
+    });
+
+    return jsonResponse({
+      taskType,
+      language: selectedLanguage,
+      output
+    }, 200, { 'Cache-Control': 'no-store' });
+  } catch (error) {
+    console.error('Health language output failed', {
+      message: error.message,
+      code: error.code || 'AI_OUTPUT_FAILED'
+    });
+    return jsonResponse({
+      error: error.code || 'AI_OUTPUT_FAILED',
+      message: error.publicMessage || 'We could not generate language output right now. Please try again.'
+    }, error.status || 502, { 'Cache-Control': 'no-store' });
+  }
+}
+
+async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env }) {
+  const response = await fetch(OPENAI_RESPONSES_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
+      store: false,
+      temperature: 0.2,
+      max_output_tokens: 1800,
+      instructions: buildHealthcareSystemPrompt(selectedLanguage),
+      input: buildOpenAIInput(input, selectedLanguage, taskType)
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.error?.message || `OpenAI failed with ${response.status}`);
+    error.status = response.status >= 400 && response.status < 500 ? 502 : response.status;
+    error.code = 'AI_OUTPUT_FAILED';
+    error.publicMessage = 'We could not generate language output right now. Please try again.';
+    throw error;
+  }
+
+  const outputText = extractOpenAIText(data);
+  const parsedOutput = parseJsonOutput(outputText);
+  return normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, outputText);
+}
+
+function buildHealthcareSystemPrompt(selectedLanguage) {
+  return [
+    'You are ClearCare, a healthcare access assistant.',
+    `Write entirely in ${selectedLanguage.instructionName}, unless preserving key medical terms in English in parentheses would help.`,
+    'Explain healthcare information in plain language for a patient or family member.',
+    'Do not diagnose, prescribe, or claim certainty.',
+    'Encourage the user to contact a licensed clinician.',
+    'For emergencies, tell the user to call 911 or local emergency services.',
+    'Use a calm, simple, culturally respectful tone.',
+    'Return only valid JSON. Do not wrap the JSON in markdown.'
+  ].join(' ');
+}
+
+function buildOpenAIInput(input, selectedLanguage, taskType) {
+  const schemaDescription = taskType === 'understand'
+    ? `Return JSON with exactly these keys:
+{
+  "simpleSummary": "string",
+  "whatThisMightMean": "string",
+  "importantInstructions": ["string"],
+  "questionsToAskDoctor": ["string"],
+  "whenToSeekUrgentHelp": ["string"],
+  "disclaimer": "string"
+}`
+    : `Return JSON with exactly these keys:
+{
+  "appointmentSummary": "string",
+  "topQuestionsToAsk": ["string"],
+  "symptomsDetailsToMention": ["string"],
+  "medicationsDocumentsToBring": ["string"],
+  "redFlagsToRaise": ["string"],
+  "disclaimer": "string"
+}`;
+
+  const taskPrompt = taskType === 'understand'
+    ? buildUnderstandPrompt(input, selectedLanguage, schemaDescription)
+    : buildPreparePrompt(input, selectedLanguage, schemaDescription);
+
+  const content = [{ type: 'input_text', text: taskPrompt }];
+  if (taskType === 'understand' && input.fileDataUrl) {
+    content.push({ type: 'input_image', image_url: input.fileDataUrl, detail: 'auto' });
+  }
+
+  return [{
+    role: 'user',
+    content
+  }];
+}
+
+function buildUnderstandPrompt(input, selectedLanguage, schemaDescription) {
+  const sourceText = input.documentText
+    ? `Medical document text:\n${input.documentText}`
+    : 'The user uploaded a medical document image. Read the image carefully if possible.';
+
+  return [
+    `Task: Explain this medical document in ${selectedLanguage.instructionName}.`,
+    'Keep the reading level simple. Organize the answer into the requested sections.',
+    'If a term is important, keep the English medical term in parentheses when useful.',
+    'Do not invent details that are not in the document.',
+    schemaDescription,
+    sourceText
+  ].join('\n\n');
+}
+
+function buildPreparePrompt(input, selectedLanguage, schemaDescription) {
+  return [
+    `Task: Build an appointment prep kit in ${selectedLanguage.instructionName}.`,
+    'Use the patient details below. Keep it practical and easy to read.',
+    'Do not diagnose the patient. Help them prepare what to say and ask.',
+    schemaDescription,
+    `Condition or concern: ${input.condition}`,
+    `Appointment type: ${input.appointmentType || 'Not specified'}`,
+    `Current medications: ${input.medications || 'Not provided'}`,
+    `Symptoms or details: ${input.symptoms || 'Not provided'}`
+  ].join('\n\n');
+}
+
+function normalizeHealthTaskType(value) {
+  return value === 'prepare' ? 'prepare' : 'understand';
+}
+
+function normalizeHealthInput(rawInput, taskType) {
+  const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+
+  if (taskType === 'prepare') {
+    const condition = truncateHealthText(input.condition, 800);
+    if (!condition) return null;
+    return {
+      condition,
+      appointmentType: truncateHealthText(input.appointmentType, 200),
+      medications: truncateHealthText(input.medications, 1500),
+      symptoms: truncateHealthText(input.symptoms, 2500)
+    };
+  }
+
+  const documentText = truncateHealthText(input.documentText, MAX_HEALTH_INPUT_CHARS);
+  const fileDataUrl = normalizeImageDataUrl(input.fileDataUrl);
+  if (!documentText && !fileDataUrl) return null;
+
+  return {
+    documentText,
+    fileDataUrl,
+    fileName: truncateHealthText(input.fileName, 200)
+  };
+}
+
+function truncateHealthText(value, maxLength) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function normalizeImageDataUrl(value) {
+  const dataUrl = String(value || '').trim();
+  if (!dataUrl || dataUrl.length > MAX_IMAGE_DATA_URL_CHARS) return '';
+  if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(dataUrl)) return '';
+  return dataUrl;
+}
+
+function extractOpenAIText(data) {
+  if (typeof data.output_text === 'string') return data.output_text.trim();
+
+  return (data.output || [])
+    .flatMap(item => item.content || [])
+    .map(part => part.text || '')
+    .join('\n')
+    .trim();
+}
+
+function parseJsonOutput(outputText) {
+  const cleaned = String(outputText || '')
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+
+  if (!cleaned) return null;
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, rawText) {
+  if (taskType === 'prepare') {
+    return {
+      appointmentSummary: stringField(parsedOutput?.appointmentSummary, rawText),
+      topQuestionsToAsk: arrayField(parsedOutput?.topQuestionsToAsk),
+      symptomsDetailsToMention: arrayField(parsedOutput?.symptomsDetailsToMention),
+      medicationsDocumentsToBring: arrayField(parsedOutput?.medicationsDocumentsToBring),
+      redFlagsToRaise: arrayField(parsedOutput?.redFlagsToRaise),
+      disclaimer: stringField(parsedOutput?.disclaimer, defaultHealthDisclaimer(selectedLanguage))
+    };
+  }
+
+  return {
+    simpleSummary: stringField(parsedOutput?.simpleSummary, rawText),
+    whatThisMightMean: stringField(parsedOutput?.whatThisMightMean, ''),
+    importantInstructions: arrayField(parsedOutput?.importantInstructions),
+    questionsToAskDoctor: arrayField(parsedOutput?.questionsToAskDoctor),
+    whenToSeekUrgentHelp: arrayField(parsedOutput?.whenToSeekUrgentHelp),
+    disclaimer: stringField(parsedOutput?.disclaimer, defaultHealthDisclaimer(selectedLanguage))
+  };
+}
+
+function stringField(value, fallback) {
+  const text = String(value || '').trim();
+  return text || fallback || '';
+}
+
+function arrayField(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => String(item || '').trim()).filter(Boolean).slice(0, 8);
+}
+
+function defaultHealthDisclaimer(selectedLanguage) {
+  if (selectedLanguage.code !== 'en') {
+    return `ClearCare is not medical advice and does not diagnose conditions. Contact a licensed clinician. For emergencies, call 911 or local emergency services.`;
+  }
+
+  return 'ClearCare is not medical advice and does not diagnose conditions. Contact a licensed clinician. For emergencies, call 911 or local emergency services.';
 }
 
 async function geocodeLocation(input, env) {
@@ -559,10 +851,10 @@ function setCached(key, value) {
   });
 }
 
-function jsonResponse(data, status = 200) {
+function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: corsHeaders({ 'Content-Type': 'application/json; charset=utf-8' })
+    headers: corsHeaders({ 'Content-Type': 'application/json; charset=utf-8', ...extraHeaders })
   });
 }
 

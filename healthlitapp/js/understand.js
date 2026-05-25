@@ -1,133 +1,139 @@
 /* ============================================================
-   CLEARCARE — UNDERSTAND PAGE JS
-   Calls Groq API to explain uploaded medical documents.
-   Requires: js/config.js loaded before this file in understand.html
+   CLEARCARE - UNDERSTAND PAGE JS
+   Generates localized plain-language explanations through Worker
    ============================================================ */
+
+let understandController = null;
 
 async function handleFile(input) {
   if (!input.files.length) return;
   const file = input.files[0];
-  const zone = document.getElementById('uploadZone');
+  const status = document.getElementById('understandStatus');
 
-  zone.innerHTML = `
-    <div class="upload-icon">⏳</div>
-    <h3>Reading "${file.name}"…</h3>
-    <p>Translating your document into plain language</p>
-  `;
+  clearUnderstandStatus();
+  setFileName(file.name);
+
+  if (file.size > 5 * 1024 * 1024) {
+    showUnderstandStatus('This file is too large for the demo. Paste the important text into the box below.', 'error');
+    return;
+  }
+
+  if (file.type.startsWith('text/') || /\.txt$/i.test(file.name)) {
+    const text = await file.text();
+    document.getElementById('documentTextInput').value = text.trim();
+    showUnderstandStatus('Text added. You can review it, then generate an explanation.', 'success');
+    document.getElementById('documentTextInput').focus();
+    return;
+  }
+
+  if (file.type.startsWith('image/')) {
+    showUnderstandStatus('Reading the image and generating an explanation...', 'success');
+    await generateExplanation({ fileName: file.name, fileDataUrl: await readFileAsDataUrl(file) });
+    return;
+  }
+
+  status.textContent = 'PDF text extraction is not available in this browser demo yet. Paste the document text below to generate an explanation.';
+  status.className = 'inline-status error';
+  document.getElementById('documentTextInput').focus();
+}
+
+async function generateExplanationFromText() {
+  const documentText = document.getElementById('documentTextInput').value.trim();
+  if (!documentText) {
+    showUnderstandStatus('Paste medical document text first, then generate an explanation.', 'error');
+    document.getElementById('documentTextInput').focus();
+    return;
+  }
+
+  await generateExplanation({ documentText });
+}
+
+async function generateExplanation(input) {
+  const healthAI = window.ClearCareHealthAI;
+  const language = healthAI.getSelectedLanguage();
+
+  if (understandController) understandController.abort();
+  understandController = new AbortController();
+
+  setUnderstandLoading(true, `Generating in ${language.label}...`);
 
   try {
-    // Step 1: Extract text from the file
-    const text = await extractText(file);
+    const data = await healthAI.requestLocalizedHealthOutput('understand', input, understandController.signal);
+    renderUnderstandOutput(data.output, data.language?.label || language.label, input.fileName);
+    showUnderstandStatus(`Generated in ${data.language?.label || language.label}.`, 'success');
+  } catch (error) {
+    if (error.name === 'AbortError') return;
 
-    if (!text || text.trim().length < 10) {
-      throw new Error('Could not read text from this file. Please try a different file or type out the key details below.');
+    if (error.code === 'AI_NOT_CONFIGURED') {
+      showUnderstandStatus('Language-powered explanations are not configured yet. Please add OPENAI_API_KEY as a Cloudflare secret.', 'error');
+      return;
     }
 
-    const language = window.ClearCare?.getLangName() || 'English';
-
-    const systemPrompt = `You are a friendly medical document translator.
-Explain the document in plain language at a 6th grade reading level.
-Respond in ${language}.
-Return ONLY a valid JSON object with these exact fields, no markdown, no extra text:
-{
-  "summary": "2-3 sentence plain-language summary",
-  "whatThisMeans": "what this means for the patient daily life",
-  "warnings": ["warning 1", "warning 2"],
-  "nextSteps": ["step 1", "step 2", "step 3"]
-}`;
-
-    const userMessage = `Please explain this medical document in plain language:\n\n${text.substring(0, 3000)}`;
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.GROQ_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user',   content: userMessage  }
-        ],
-        temperature: 0.2,
-        max_tokens: 1000
-      })
-    });
-
-    const data    = await response.json();
-    console.log('Groq raw response:', JSON.stringify(data));
-    const rawText = data.choices?.[0]?.message?.content || '';
-
-    if (!rawText) throw new Error('No response from Groq. Check your API key in config.js.');
-
-    const cleaned   = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const jsonStart = cleaned.indexOf('{');
-    const jsonEnd   = cleaned.lastIndexOf('}');
-
-    if (jsonStart === -1 || jsonEnd === -1) {
-      throw new Error('Could not parse response. Raw: ' + cleaned.substring(0, 200));
-    }
-
-    const result = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
-
-    // Render results
-    document.getElementById('fileName').textContent    = file.name;
-    document.getElementById('summaryText').textContent = result.summary;
-    document.getElementById('meansText').textContent   = result.whatThisMeans;
-
-    const warnings = document.getElementById('warningsArea');
-    warnings.innerHTML = (result.warnings || []).map(w => `
-      <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:10px 14px;font-size:14px;color:#7F1D1D;margin-bottom:8px;">
-        ⚠️ ${w}
-      </div>
-    `).join('');
-
-    document.getElementById('nextStepsList').innerHTML =
-      (result.nextSteps || []).map(s => `<li>${s}</li>`).join('');
-
-    document.getElementById('resultCard').style.display = 'block';
-    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  } catch (err) {
-    zone.innerHTML = `
-      <div class="upload-icon">❌</div>
-      <h3>Something went wrong</h3>
-      <p>${err.message}</p>
-      <br/><span class="btn btn-primary" style="cursor:pointer;" onclick="location.reload()">Try again</span>
-    `;
+    showUnderstandStatus('We could not generate the explanation right now. Please try again.', 'error');
+  } finally {
+    setUnderstandLoading(false);
+    understandController = null;
   }
 }
 
-// ── Extract text from uploaded file ──
-async function extractText(file) {
-  const type = file.type;
+function renderUnderstandOutput(output, languageLabel, fileName = '') {
+  const safeOutput = output || {};
+  setFileName(fileName || `Generated in ${languageLabel}`);
 
-  // Plain text files
-  if (type === 'text/plain') {
-    return await file.text();
-  }
+  document.getElementById('summaryText').textContent = safeOutput.simpleSummary || 'No summary was returned.';
+  document.getElementById('meansText').textContent = safeOutput.whatThisMightMean || 'No explanation was returned.';
+  renderList('instructionsList', safeOutput.importantInstructions);
+  renderList('doctorQuestionsList', safeOutput.questionsToAskDoctor);
+  renderList('urgentHelpList', safeOutput.whenToSeekUrgentHelp);
+  document.getElementById('understandDisclaimer').textContent =
+    safeOutput.disclaimer || 'ClearCare is not medical advice, does not diagnose conditions, and does not replace a licensed clinician. For emergencies, call 911 or local emergency services.';
 
-  // For PDF and images — read as text if possible, otherwise prompt user
-  if (type === 'application/pdf') {
-    // Basic PDF text extraction — works for text-based PDFs
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes       = new Uint8Array(arrayBuffer);
-    let text          = '';
-    for (let i = 0; i < bytes.length; i++) {
-      if (bytes[i] >= 32 && bytes[i] < 127) {
-        text += String.fromCharCode(bytes[i]);
-      }
-    }
-    // Pull out readable chunks
-    const readable = text.match(/[A-Za-z0-9\s,.\-:;'"!?()]{20,}/g) || [];
-    return readable.join(' ');
-  }
+  const resultCard = document.getElementById('resultCard');
+  resultCard.style.display = 'block';
+  resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-  // For images — ask user to describe or type the content
-  if (type.startsWith('image/')) {
-    throw new Error('Image files are not yet supported. Please type out the key details from your document in the text box instead, or upload a PDF.');
-  }
+function renderList(id, items) {
+  const list = document.getElementById(id);
+  const values = Array.isArray(items) && items.length ? items : ['No items were returned.'];
+  list.innerHTML = values.map(item => `<li>${escapeHTML(String(item))}</li>`).join('');
+}
 
-  throw new Error('Unsupported file type. Please upload a PDF or text file.');
+function setUnderstandLoading(isLoading, message = '') {
+  const button = document.getElementById('generateExplanationButton');
+  button.disabled = isLoading;
+  button.textContent = isLoading ? 'Generating...' : 'Generate explanation';
+  if (message) showUnderstandStatus(message, 'success');
+}
+
+function showUnderstandStatus(message, type = '') {
+  const status = document.getElementById('understandStatus');
+  status.textContent = message;
+  status.className = `inline-status ${type}`.trim();
+}
+
+function clearUnderstandStatus() {
+  showUnderstandStatus('');
+}
+
+function setFileName(fileName) {
+  document.getElementById('fileName').textContent = fileName || '';
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }

@@ -81,7 +81,8 @@
           <textarea class="form-textarea" id="symptoms" placeholder="Describe what you've been feeling…"></textarea>
         </div>
 
-        <button class="btn btn-primary btn-lg" onclick="buildPrepKit()" style="width:100%;">Build my prep kit</button>
+        <button class="btn btn-primary btn-lg" id="buildPrepButton" onclick="buildPrepKit()" style="width:100%;">Build my prep kit</button>
+        <p class="inline-status" id="prepareStatus" aria-live="polite"></p>
       </div>
 
       <!-- RESULT -->
@@ -95,16 +96,28 @@
 
         <div class="result-card">
           <div class="result-section">
-            <div class="result-section-label">Questions to ask your doctor</div>
-            <ol id="questionsList" style="padding-left:20px;color:var(--gray-700);font-size:15px;line-height:2.2;"></ol>
+            <div class="result-section-label">Top questions to ask</div>
+            <ol id="questionsList" class="health-output-list health-output-list-numbered"></ol>
           </div>
           <div class="result-section">
             <div class="result-section-label">Symptom summary — read this to your doctor</div>
             <div id="symptomSummary" style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-md);padding:16px;font-size:15px;color:var(--gray-700);line-height:1.7;font-style:italic;"></div>
           </div>
           <div class="result-section">
+            <div class="result-section-label">Symptoms/details to mention</div>
+            <ul id="detailsToMentionList" class="health-output-list"></ul>
+          </div>
+          <div class="result-section">
             <div class="result-section-label">Checklist — before your appointment</div>
-            <ul id="checklistItems" style="padding-left:0;list-style:none;"></ul>
+            <ul id="checklistItems" class="health-output-list health-output-checklist"></ul>
+          </div>
+          <div class="result-section">
+            <div class="result-section-label">Red flags to bring up immediately</div>
+            <ul id="redFlagsList" class="health-output-list health-output-list-alert"></ul>
+          </div>
+          <div class="result-section">
+            <div class="result-section-label">Disclaimer</div>
+            <p id="prepareDisclaimer">ClearCare is not medical advice and does not diagnose conditions.</p>
           </div>
         </div>
       </div>
@@ -136,8 +149,9 @@
     </div>
   </div>
 
-<script src="../js/config.js"></script>
-<script src="../js/main.js"></script>
-<script src="../js/prepare.js"></script>
+  <script src="../js/languages.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/health-ai.js"></script>
+  <script src="../js/prepare.js"></script>
 </body>
 </html>

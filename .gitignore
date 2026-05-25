@@ -8,3 +8,11 @@ Thumbs.db
 # Editor folders
 .vscode/
 .idea/
+# API keys and local development secrets. Never push these to GitHub.
+.env
+.env.*
+.dev.vars
+healthlitapp/js/config.js
+
+# Cloudflare local output
+.wrangler/

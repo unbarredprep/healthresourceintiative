@@ -21,24 +21,53 @@ function closeLangModal() {
   document.getElementById('langModal')?.classList.remove('open');
   document.body.style.overflow = '';
 }
-function setLang(code, el) {
-  document.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
-  el?.classList.add('active');
+
+function getLanguageTools() {
+  return window.ClearCareLanguages || {
+    STORAGE_KEY: 'clearcare_language',
+    languages: [{ code: 'en', label: 'English', instructionName: 'English' }],
+    defaultLanguage: { code: 'en', label: 'English', instructionName: 'English' },
+    getLanguage: () => ({ code: 'en', label: 'English', instructionName: 'English' }),
+    getStoredLanguage: () => ({ code: 'en', label: 'English', instructionName: 'English' })
+  };
+}
+
+function getSelectedLanguage() {
+  return getLanguageTools().getStoredLanguage(localStorage);
+}
+
+function renderLanguageOptions() {
+  const languageTools = getLanguageTools();
+  document.querySelectorAll('.lang-grid').forEach(grid => {
+    grid.innerHTML = languageTools.languages.map(language => `
+      <button class="lang-option" type="button" data-language-code="${language.code}">
+        ${language.label}
+      </button>
+    `).join('');
+  });
+}
+
+function updateLanguageUI(language = getSelectedLanguage()) {
+  document.documentElement.lang = language.code;
+  document.querySelectorAll('.lang-option').forEach(option => {
+    option.classList.toggle('active', option.dataset.languageCode === language.code);
+  });
+
   document.querySelectorAll('.lang-btn').forEach(b => {
     const globe = b.querySelector('svg');
-    b.textContent = code;
-    if (globe) b.prepend(globe);
-  });
-  localStorage.setItem('cc_lang', code);
-}
-const savedLang = localStorage.getItem('cc_lang');
-if (savedLang) {
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    const globe = b.querySelector('svg');
-    b.textContent = savedLang;
+    b.textContent = language.code.toUpperCase();
     if (globe) b.prepend(globe);
   });
 }
+
+function setLang(code) {
+  const languageTools = getLanguageTools();
+  const language = languageTools.getLanguage(code);
+  localStorage.setItem(languageTools.STORAGE_KEY, language.code);
+  localStorage.removeItem(languageTools.LEGACY_STORAGE_KEY || 'cc_lang');
+  updateLanguageUI(language);
+}
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeLangModal();
 });
@@ -88,6 +117,16 @@ const statsSection = document.querySelector('.stats');
 if (statsSection) statsObserver.observe(statsSection);
 
 document.addEventListener('DOMContentLoaded', () => {
+  renderLanguageOptions();
+  updateLanguageUI();
+  document.querySelectorAll('.lang-grid').forEach(grid => {
+    grid.addEventListener('click', event => {
+      const option = event.target.closest('[data-language-code]');
+      if (!option) return;
+      setLang(option.dataset.languageCode);
+    });
+  });
+
   const path = window.location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-link, .nav-links a').forEach(link => {
     const href = link.getAttribute('href') || '';
