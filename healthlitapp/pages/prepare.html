@@ -35,6 +35,7 @@
       <a href="prepare.html">Prepare</a>
       <a href="connect.html">Connect</a>
       <a href="about.html">About</a>
+      <button class="mobile-lang-btn" type="button" onclick="openLangModal()">Language</button>
     </div>
   </nav>
 
@@ -47,11 +48,11 @@
   </section>
 
   <div class="page-body">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;">
+    <div class="prepare-layout">
 
       <!-- FORM -->
-      <div>
-        <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);margin-bottom:28px;">Tell us about your visit</div>
+      <div class="prepare-form-panel">
+        <div class="section-card-title">Tell us about your visit</div>
 
         <div class="form-group">
           <label class="form-label">What condition or concern are you being seen for?</label>
@@ -81,15 +82,15 @@
           <textarea class="form-textarea" id="symptoms" placeholder="Describe what you've been feeling…"></textarea>
         </div>
 
-        <button class="btn btn-primary btn-lg" id="buildPrepButton" onclick="buildPrepKit()" style="width:100%;">Build my prep kit</button>
+        <button class="btn btn-primary btn-lg full-width-btn" id="buildPrepButton" onclick="buildPrepKit()">Build my prep kit</button>
         <p class="inline-status" id="prepareStatus" aria-live="polite"></p>
       </div>
 
       <!-- RESULT -->
       <div id="prepResult" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-          <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);">Your prep kit</div>
-          <div style="display:flex;gap:10px;">
+        <div class="result-card-header">
+          <div class="result-card-title">Your prep kit</div>
+          <div class="result-card-actions">
             <button class="btn btn-outline" onclick="window.print()">Print</button>
           </div>
         </div>
@@ -101,7 +102,7 @@
           </div>
           <div class="result-section">
             <div class="result-section-label">Symptom summary — read this to your doctor</div>
-            <div id="symptomSummary" style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-md);padding:16px;font-size:15px;color:var(--gray-700);line-height:1.7;font-style:italic;"></div>
+            <div id="symptomSummary" class="summary-box"></div>
           </div>
           <div class="result-section">
             <div class="result-section-label">Symptoms/details to mention</div>
@@ -123,10 +124,10 @@
       </div>
 
       <!-- EMPTY STATE -->
-      <div id="prepEmpty" style="background:var(--blue-mist);border:1px solid var(--blue-ghost);border-radius:var(--radius-xl);padding:48px;text-align:center;">
-        <div style="font-size:48px;margin-bottom:16px;">📋</div>
-        <div style="font-family:var(--font-display);font-size:20px;color:var(--navy);margin-bottom:8px;">Your prep kit will appear here</div>
-        <div style="font-size:14px;color:var(--gray-500);">Fill in the form on the left and click "Build my prep kit"</div>
+      <div id="prepEmpty" class="empty-panel">
+        <div class="empty-panel-icon">📋</div>
+        <div class="empty-panel-title">Your prep kit will appear here</div>
+        <div class="empty-panel-text">Fill in the form on the left and click "Build my prep kit"</div>
       </div>
 
     </div>

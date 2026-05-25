@@ -35,6 +35,7 @@
       <a href="prepare.html">Prepare</a>
       <a href="connect.html">Connect</a>
       <a href="about.html">About</a>
+      <button class="mobile-lang-btn" type="button" onclick="openLangModal()">Language</button>
     </div>
   </nav>
 
@@ -58,10 +59,10 @@
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFile(this)" />
     </div>
 
-    <p style="text-align:center;font-size:13px;color:var(--gray-500);margin:16px 0 24px;">You can also paste text from a document below. ClearCare sends it to the secure Worker only to generate your explanation.</p>
+    <p class="understand-paste-note">You can also paste text from a document below. ClearCare sends it to the secure Worker only to generate your explanation.</p>
 
     <div class="result-card document-input-card">
-      <div class="result-section" style="margin-bottom:18px;">
+      <div class="result-section compact-result-section">
         <div class="result-section-label">Document text</div>
         <label class="form-label" for="documentTextInput">Paste medical document text</label>
         <textarea class="form-textarea" id="documentTextInput" rows="8" placeholder="Paste discharge instructions, lab notes, prescription directions, or other medical text here."></textarea>
@@ -74,12 +75,12 @@
     </div>
 
     <div class="result-card" id="resultCard" style="display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+      <div class="result-card-header">
         <div>
-          <div style="font-family:var(--font-display);font-size:22px;color:var(--navy);">Your explanation</div>
-          <div style="font-size:13px;color:var(--gray-500);margin-top:4px;" id="fileName"></div>
+          <div class="result-card-title">Your explanation</div>
+          <div class="result-card-subtitle" id="fileName"></div>
         </div>
-        <div style="display:flex;gap:10px;">
+        <div class="result-card-actions">
           <button class="btn btn-outline" onclick="window.print()">Print</button>
           <button class="btn btn-primary">Save</button>
         </div>
