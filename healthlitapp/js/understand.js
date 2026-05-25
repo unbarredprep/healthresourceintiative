@@ -65,7 +65,7 @@ async function generateExplanation(input) {
     if (error.name === 'AbortError') return;
 
     if (error.code === 'AI_NOT_CONFIGURED') {
-      showUnderstandStatus('Language-powered explanations are not configured yet. Please add OPENAI_API_KEY as a Cloudflare secret.', 'error');
+      showUnderstandStatus('Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.', 'error');
       return;
     }
 

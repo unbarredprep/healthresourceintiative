@@ -44,7 +44,7 @@ async function buildPrepKit() {
 
     document.getElementById('prepEmpty').style.display = 'block';
     if (error.code === 'AI_NOT_CONFIGURED') {
-      showPrepareStatus('Language-powered explanations are not configured yet. Please add OPENAI_API_KEY as a Cloudflare secret.', 'error');
+      showPrepareStatus('Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.', 'error');
       return;
     }
 

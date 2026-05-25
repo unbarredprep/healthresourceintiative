@@ -4,14 +4,14 @@ const CENSUS_GEOCODER_URL = 'https://geocoding.geo.census.gov/geocoder/locations
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const HRSA_HEALTH_CENTERS_URL = 'https://data.hrsa.gov/HDWAPI3_External/api/v1/GetHealthCentersAroundALocation';
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const GEMINI_GENERATE_CONTENT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const APP_USER_AGENT = 'ClearCare/1.0 (healthresourceintiative; https://github.com/unbarredprep/healthresourceintiative)';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_RESULTS = 30;
 const MAX_HEALTH_INPUT_CHARS = 12000;
 const MAX_IMAGE_DATA_URL_CHARS = 7000000;
-const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
-const AI_NOT_CONFIGURED_MESSAGE = 'Language-powered explanations are not configured yet. Please add OPENAI_API_KEY as a Cloudflare secret.';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
+const AI_NOT_CONFIGURED_MESSAGE = 'Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.';
 const LANGUAGE_TOOLS = globalThis.ClearCareLanguages;
 
 const cache = new Map();
@@ -165,7 +165,7 @@ async function handleHealthOutput(request, env) {
     return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
   }
 
-  if (!env.OPENAI_API_KEY) {
+  if (!env.GEMINI_API_KEY) {
     return jsonResponse({
       error: 'AI_NOT_CONFIGURED',
       message: AI_NOT_CONFIGURED_MESSAGE
@@ -219,33 +219,37 @@ async function handleHealthOutput(request, env) {
 }
 
 async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env }) {
-  const response = await fetch(OPENAI_RESPONSES_URL, {
+  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  const response = await fetch(`${GEMINI_GENERATE_CONTENT_BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+      'x-goog-api-key': env.GEMINI_API_KEY,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
-      store: false,
-      temperature: 0.2,
-      max_output_tokens: 1800,
-      instructions: buildHealthcareSystemPrompt(selectedLanguage),
-      input: buildOpenAIInput(input, selectedLanguage, taskType)
+      systemInstruction: {
+        parts: [{ text: buildHealthcareSystemPrompt(selectedLanguage) }]
+      },
+      contents: buildGeminiContents(input, selectedLanguage, taskType),
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 1800,
+        responseMimeType: 'application/json'
+      }
     })
   });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const error = new Error(data.error?.message || `OpenAI failed with ${response.status}`);
+    const error = new Error(data.error?.message || `Gemini failed with ${response.status}`);
     error.status = response.status >= 400 && response.status < 500 ? 502 : response.status;
     error.code = 'AI_OUTPUT_FAILED';
     error.publicMessage = 'We could not generate language output right now. Please try again.';
     throw error;
   }
 
-  const outputText = extractOpenAIText(data);
+  const outputText = extractGeminiText(data);
   const parsedOutput = parseJsonOutput(outputText);
   return normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, outputText);
 }
@@ -263,7 +267,7 @@ function buildHealthcareSystemPrompt(selectedLanguage) {
   ].join(' ');
 }
 
-function buildOpenAIInput(input, selectedLanguage, taskType) {
+function buildGeminiContents(input, selectedLanguage, taskType) {
   const schemaDescription = taskType === 'understand'
     ? `Return JSON with exactly these keys:
 {
@@ -288,14 +292,22 @@ function buildOpenAIInput(input, selectedLanguage, taskType) {
     ? buildUnderstandPrompt(input, selectedLanguage, schemaDescription)
     : buildPreparePrompt(input, selectedLanguage, schemaDescription);
 
-  const content = [{ type: 'input_text', text: taskPrompt }];
+  const parts = [{ text: taskPrompt }];
   if (taskType === 'understand' && input.fileDataUrl) {
-    content.push({ type: 'input_image', image_url: input.fileDataUrl, detail: 'auto' });
+    const image = parseImageDataUrl(input.fileDataUrl);
+    if (image) {
+      parts.push({
+        inline_data: {
+          mime_type: image.mimeType,
+          data: image.base64Data
+        }
+      });
+    }
   }
 
   return [{
     role: 'user',
-    content
+    parts
   }];
 }
 
@@ -367,11 +379,19 @@ function normalizeImageDataUrl(value) {
   return dataUrl;
 }
 
-function extractOpenAIText(data) {
-  if (typeof data.output_text === 'string') return data.output_text.trim();
+function parseImageDataUrl(dataUrl) {
+  const match = String(dataUrl || '').match(/^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/i);
+  if (!match) return null;
 
-  return (data.output || [])
-    .flatMap(item => item.content || [])
+  return {
+    mimeType: match[1].toLowerCase(),
+    base64Data: match[2]
+  };
+}
+
+function extractGeminiText(data) {
+  return (data.candidates || [])
+    .flatMap(candidate => candidate.content?.parts || [])
     .map(part => part.text || '')
     .join('\n')
     .trim();

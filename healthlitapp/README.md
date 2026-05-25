@@ -32,7 +32,7 @@ healthlitapp/
 
 - Pure HTML, CSS, and vanilla JavaScript
 - Cloudflare Workers with Static Assets
-- OpenAI Responses API called only from the Worker
+- Gemini API called only from the Worker
 - HRSA Health Center Data
 - OpenStreetMap, Overpass, and Nominatim public data
 
@@ -40,16 +40,16 @@ healthlitapp/
 
 Understand and Prepare use the Cloudflare Worker route `/api/health-output` to generate plain-language healthcare outputs in the selected language.
 
-Set the OpenAI key as a Cloudflare secret:
+Set the Gemini key as a Cloudflare secret:
 
 ```powershell
-npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put GEMINI_API_KEY
 ```
 
 For local Worker development, add the key to `.dev.vars`:
 
 ```text
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
 ```
 
 Do not commit `.env`, `.dev.vars`, or API keys. See `../docs/languages.md` for supported languages, setup steps, and manual verification.

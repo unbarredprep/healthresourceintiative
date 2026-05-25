@@ -9,9 +9,9 @@
   // Optional enrichment for HRSA Health Center web services:
   // wrangler secret put HRSA_API_TOKEN
   // Required for localized AI outputs on Understand and Prepare:
-  // wrangler secret put OPENAI_API_KEY
+  // wrangler secret put GEMINI_API_KEY
   // Optional model override:
-  // wrangler secret put OPENAI_MODEL
+  // wrangler secret put GEMINI_MODEL
   // Optional contact email passed to Nominatim per its usage policy:
   // wrangler secret put NOMINATIM_CONTACT_EMAIL
   "assets": {
