@@ -1,9 +1,7 @@
 /* ============================================================
    CLEARCARE — HEALTH AI
-   Replaces /api/health-output with direct Groq API calls.
-   Matches the exact interface understand.js and prepare.js expect:
-   - requestLocalizedHealthOutput(taskType, input, signal)
-   - Returns { output: {...}, language: { label, code } }
+   Direct Groq API calls. JSON field names match exactly what
+   understand.js and prepare.js read from data.output.
    ============================================================ */
 
 (function attachClearCareHealthAI(root) {
@@ -15,6 +13,8 @@
   }
 
   const TASK_PROMPTS = {
+
+    // Field names match exactly what understand.js reads
     understand: (language) => `You are a friendly medical document translator for ClearCare.
 Explain the medical document in plain language at a 6th grade reading level.
 Respond entirely in ${language}.
@@ -28,16 +28,17 @@ Return ONLY a valid JSON object with these exact fields, no markdown, no extra t
   "disclaimer": "ClearCare is not medical advice, does not diagnose conditions, and does not replace a licensed clinician. For emergencies, call 911 or local emergency services."
 }`,
 
+    // Field names match exactly what prepare.js reads
     prepare: (language) => `You are a helpful medical appointment preparation assistant for ClearCare.
 Help the patient prepare for their upcoming doctor visit.
 Respond entirely in ${language}.
 Return ONLY a valid JSON object with these exact fields, no markdown, no extra text:
 {
-  "questions": ["question 1", "question 2", "question 3", "question 4", "question 5", "question 6", "question 7"],
-  "symptomSummary": "A short paragraph the patient can read aloud to their doctor",
-  "detailsToMention": ["detail 1", "detail 2", "detail 3"],
-  "checklist": ["item 1", "item 2", "item 3", "item 4", "item 5"],
-  "redFlags": ["red flag 1", "red flag 2"],
+  "appointmentSummary": "A short paragraph the patient can read aloud to their doctor describing their situation",
+  "topQuestionsToAsk": ["question 1", "question 2", "question 3", "question 4", "question 5", "question 6", "question 7"],
+  "symptomsDetailsToMention": ["symptom or detail 1", "symptom or detail 2", "symptom or detail 3"],
+  "medicationsDocumentsToBring": ["item to bring 1", "item to bring 2", "item to bring 3", "item to bring 4"],
+  "redFlagsToRaise": ["red flag 1", "red flag 2"],
   "disclaimer": "ClearCare is not medical advice and does not diagnose conditions."
 }`
   };
@@ -64,8 +65,13 @@ Return ONLY a valid JSON object with these exact fields, no markdown, no extra t
     } else if (input.documentText) {
       userMessage = `Please explain this medical document:\n\n${input.documentText}`;
     } else if (input.fileDataUrl) {
-      // Image was passed — extract description from data URL type
-      userMessage = `The user has uploaded a medical document image (${input.fileName || 'document'}). Please provide a general explanation template they can fill in, noting that image reading is not yet supported and they should paste the text instead.`;
+      userMessage = `The user uploaded a medical document image (${input.fileName || 'document'}). Image reading is not yet supported — please return a helpful template with placeholder text they can fill in.`;
+    } else if (input.condition) {
+      // Prepare page input
+      userMessage = `Condition: ${input.condition}
+Appointment type: ${input.appointmentType || 'general'}
+Current medications: ${input.medications || 'none listed'}
+Symptoms: ${input.symptoms || 'none described'}`;
     } else {
       userMessage = JSON.stringify(input);
     }
@@ -105,7 +111,7 @@ Return ONLY a valid JSON object with these exact fields, no markdown, no extra t
 
     const parsed = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1));
 
-    // Return in the format understand.js and prepare.js expect
+    // Return in the format both understand.js and prepare.js expect
     return {
       output:   parsed,
       language: {
