@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
   <style>
     .onboard-wrap {
       min-height: 100vh;
@@ -29,83 +29,50 @@
       box-shadow: var(--shadow-lg);
       animation: fadeUp 0.5s ease;
     }
-    .step-dots {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 36px;
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
+    .step-dots { display: flex; gap: 8px; margin-bottom: 36px; }
     .step-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--blue-ghost);
-      transition: all 0.3s;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--blue-ghost); transition: all 0.3s;
     }
-    .step-dot.active {
-      background: var(--blue-rich);
-      width: 24px;
-      border-radius: 4px;
-    }
+    .step-dot.active { background: var(--blue-rich); width: 24px; border-radius: 4px; }
     .step { display: none; }
     .step.active { display: block; animation: fadeUp 0.35s ease; }
     .step h2 { font-family: var(--font-display); font-size: 28px; color: var(--navy); margin-bottom: 10px; }
     .step p  { font-size: 15px; color: var(--gray-500); margin-bottom: 28px; line-height: 1.65; }
-    .lang-grid-lg {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 28px;
-    }
+    .lang-grid-lg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
     .lang-option-lg {
-      background: var(--off-white);
-      border: 2px solid var(--blue-ghost);
-      border-radius: var(--radius-md);
-      padding: 14px 16px;
-      font-family: var(--font-body);
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--gray-700);
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.15s;
+      background: var(--off-white); border: 2px solid var(--blue-ghost);
+      border-radius: var(--radius-md); padding: 14px 16px;
+      font-family: var(--font-body); font-size: 15px; font-weight: 500;
+      color: var(--gray-700); cursor: pointer; text-align: left; transition: all 0.15s;
     }
     .lang-option-lg:hover  { background: var(--blue-mist); border-color: var(--blue-pale); }
     .lang-option-lg.active { background: var(--blue-mist); border-color: var(--blue-rich); color: var(--blue-deep); }
+    .lang-option-english { display: block; font-size: 12px; color: var(--gray-500); margin-top: 2px; font-weight: 400; }
     .text-size-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
     .text-size-option {
-      background: var(--off-white);
-      border: 2px solid var(--blue-ghost);
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-align: left;
+      background: var(--off-white); border: 2px solid var(--blue-ghost);
+      border-radius: var(--radius-md); padding: 16px 20px;
+      cursor: pointer; transition: all 0.15s; text-align: left;
     }
     .text-size-option:hover  { border-color: var(--blue-pale); }
     .text-size-option.active { border-color: var(--blue-rich); background: var(--blue-mist); }
     .text-size-option .label { font-weight: 600; color: var(--navy); }
     .text-size-option .desc  { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
-    .nav-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-    }
+    .nav-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
     .goal-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
     .goal-option {
-      background: var(--off-white);
-      border: 2px solid var(--blue-ghost);
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: flex;
-      gap: 14px;
-      align-items: center;
+      background: var(--off-white); border: 2px solid var(--blue-ghost);
+      border-radius: var(--radius-md); padding: 16px 20px;
+      cursor: pointer; transition: all 0.15s; display: flex; gap: 14px; align-items: center;
     }
     .goal-option:hover  { border-color: var(--blue-pale); }
     .goal-option.active { border-color: var(--blue-rich); background: var(--blue-mist); }
-    .goal-icon { font-size: 22px; flex-shrink: 0; }
+    .goal-icon  { font-size: 22px; flex-shrink: 0; }
     .goal-label { font-weight: 600; color: var(--navy); font-size: 15px; }
     .goal-desc  { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
     @media (max-width: 540px) {
@@ -119,8 +86,12 @@
   <div class="onboard-wrap">
     <div class="onboard-card">
 
-      <a href="../index.html" class="nav-logo" style="margin-bottom:32px;display:inline-flex;">
-        <span class="logo-mark">C</span>
+      <a href="../index.html" class="nav-logo" style="margin-bottom:32px;display:inline-flex;" data-no-translate>
+        <div class="logo-mark">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 2L9 16M2 9L16 9" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
         <span class="logo-text">ClearCare</span>
       </a>
 
@@ -135,16 +106,8 @@
       <div class="step active" id="step-0">
         <h2>Choose your language</h2>
         <p>Everything will appear in the language you choose.</p>
-        <div class="lang-grid-lg" id="onboardingLanguageGrid">
-          <button class="lang-option-lg active" onclick="selectOption(this,'lang','EN')">🇺🇸 English</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','ES')">🇲🇽 Español</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','ZH')">🇨🇳 中文</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','VI')">🇻🇳 Tiếng Việt</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','KO')">🇰🇷 한국어</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','AR')">🇸🇦 العربية</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','HT')">🇭🇹 Kreyòl</button>
-          <button class="lang-option-lg" onclick="selectOption(this,'lang','PT')">🇧🇷 Português</button>
-        </div>
+        <!-- Populated by renderOnboardingLanguages() -->
+        <div class="lang-grid-lg" id="onboardingLanguageGrid"></div>
         <div class="nav-row">
           <span></span>
           <button class="btn btn-primary" onclick="nextStep()">Next →</button>
@@ -156,15 +119,15 @@
         <h2>How do you prefer to read?</h2>
         <p>We'll adjust the text size across the whole app.</p>
         <div class="text-size-options">
-          <button class="text-size-option active" onclick="selectOption(this,'textsize','normal')">
+          <button class="text-size-option active" onclick="selectSize(this,'normal')">
             <div class="label" style="font-size:16px;">Standard text</div>
             <div class="desc">Default reading size</div>
           </button>
-          <button class="text-size-option" onclick="selectOption(this,'textsize','large')">
+          <button class="text-size-option" onclick="selectSize(this,'large')">
             <div class="label" style="font-size:20px;">Large text</div>
             <div class="desc">Easier to read on phones</div>
           </button>
-          <button class="text-size-option" onclick="selectOption(this,'textsize','xlarge')">
+          <button class="text-size-option" onclick="selectSize(this,'xlarge')">
             <div class="label" style="font-size:24px;">Extra large text</div>
             <div class="desc">Maximum readability</div>
           </button>
@@ -180,28 +143,28 @@
         <h2>What brings you here today?</h2>
         <p>We'll take you straight to what you need.</p>
         <div class="goal-grid">
-          <button class="goal-option" onclick="selectOption(this,'goal','understand')">
+          <button class="goal-option" onclick="selectGoal(this,'understand')">
             <span class="goal-icon">📄</span>
             <div>
               <div class="goal-label">I have a document I don't understand</div>
               <div class="goal-desc">Discharge papers, lab results, prescription</div>
             </div>
           </button>
-          <button class="goal-option" onclick="selectOption(this,'goal','prepare')">
+          <button class="goal-option" onclick="selectGoal(this,'prepare')">
             <span class="goal-icon">📋</span>
             <div>
               <div class="goal-label">I have a doctor's appointment coming up</div>
               <div class="goal-desc">Help me prepare what to say and ask</div>
             </div>
           </button>
-          <button class="goal-option" onclick="selectOption(this,'goal','connect')">
+          <button class="goal-option" onclick="selectGoal(this,'connect')">
             <span class="goal-icon">🏥</span>
             <div>
               <div class="goal-label">I need to find a clinic or doctor</div>
               <div class="goal-desc">Find free or low-cost care near me</div>
             </div>
           </button>
-          <button class="goal-option" onclick="selectOption(this,'goal','explore')">
+          <button class="goal-option" onclick="selectGoal(this,'explore')">
             <span class="goal-icon">🔍</span>
             <div>
               <div class="goal-label">Just exploring</div>
@@ -228,75 +191,110 @@
     </div>
   </div>
 
+  <!-- config must load before languages and i18n -->
+  <script src="../js/config.js"></script>
   <script src="../js/languages.js"></script>
   <script src="../js/i18n.js"></script>
   <script>
-    let currentStep = 0;
-    const totalSteps = 4;
     const languageTools = window.ClearCareLanguages;
+
     const prefs = {
-      lang: languageTools.getStoredLanguage(localStorage).code,
-      textsize: 'normal',
-      goal: 'explore'
+      lang:     languageTools.getStoredLanguage(localStorage).code,
+      textsize: localStorage.getItem('cc_textsize') || 'normal',
+      goal:     'explore'
     };
 
+    let currentStep = 0;
+    const totalSteps = 4;
+
+    /* ── Render language buttons from languages.js ── */
     function renderOnboardingLanguages() {
       const grid = document.getElementById('onboardingLanguageGrid');
-      grid.innerHTML = languageTools.languages.map(language => `
-        <button class="lang-option-lg ${language.code === prefs.lang ? 'active' : ''}" type="button" onclick="selectOption(this,'lang','${language.code}')" data-no-translate>
-          ${language.nativeLabel || language.label}
-          <span class="lang-option-english">${language.label}</span>
+      grid.innerHTML = languageTools.languages.map(lang => `
+        <button class="lang-option-lg ${lang.code === prefs.lang ? 'active' : ''}"
+          type="button" data-no-translate data-lang-code="${lang.code}"
+          onclick="selectLang(this, '${lang.code}')">
+          ${lang.nativeLabel || lang.label}
+          <span class="lang-option-english">${lang.label}</span>
         </button>
       `).join('');
     }
 
+    /* ── Language selection ── */
+    function selectLang(el, code) {
+      document.querySelectorAll('#onboardingLanguageGrid .lang-option-lg')
+        .forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      prefs.lang = code;
+      const language = languageTools.setStoredLanguage(localStorage, code);
+      document.documentElement.lang = language.code;
+      document.documentElement.dir  = language.dir || 'ltr';
+      window.ClearCareI18n?.translatePage(language);
+    }
+
+    /* ── Text size selection ── */
+    function selectSize(el, size) {
+      document.querySelectorAll('.text-size-option').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      prefs.textsize = size;
+      const scale = { normal: '16px', large: '19px', xlarge: '22px' };
+      document.documentElement.style.fontSize = scale[size] || '16px';
+    }
+
+    /* ── Goal selection ── */
+    function selectGoal(el, goal) {
+      document.querySelectorAll('.goal-option').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      prefs.goal = goal;
+    }
+
+    /* ── Step navigation ── */
     function nextStep() {
       if (currentStep < totalSteps - 1) {
         document.getElementById('step-' + currentStep).classList.remove('active');
-        document.getElementById('dot-' + currentStep).classList.remove('active');
+        document.getElementById('dot-'  + currentStep).classList.remove('active');
         currentStep++;
         document.getElementById('step-' + currentStep).classList.add('active');
-        document.getElementById('dot-' + currentStep).classList.add('active');
+        document.getElementById('dot-'  + currentStep).classList.add('active');
       }
     }
     function prevStep() {
       if (currentStep > 0) {
         document.getElementById('step-' + currentStep).classList.remove('active');
-        document.getElementById('dot-' + currentStep).classList.remove('active');
+        document.getElementById('dot-'  + currentStep).classList.remove('active');
         currentStep--;
         document.getElementById('step-' + currentStep).classList.add('active');
-        document.getElementById('dot-' + currentStep).classList.add('active');
+        document.getElementById('dot-'  + currentStep).classList.add('active');
       }
     }
-    function selectOption(el, key, val) {
-      const siblings = el.parentElement.querySelectorAll('.' + el.className.split(' ')[0]);
-      siblings.forEach(s => s.classList.remove('active'));
-      el.classList.add('active');
-      prefs[key] = val;
-      if (key === 'lang') {
-        const language = languageTools.setStoredLanguage(localStorage, val);
-        document.documentElement.lang = language.code;
-        document.documentElement.dir = language.dir || 'ltr';
-        window.ClearCareI18n?.translatePage(language);
-      }
-    }
+
+    /* ── Finish — save prefs and route to goal ── */
     function finishOnboarding() {
-      localStorage.setItem(languageTools.STORAGE_KEY, prefs.lang);
+      languageTools.setStoredLanguage(localStorage, prefs.lang);
       localStorage.setItem('cc_textsize', prefs.textsize);
+
+      // Apply text size immediately before navigating
+      const scale = { normal: '16px', large: '19px', xlarge: '22px' };
+      document.documentElement.style.fontSize = scale[prefs.textsize] || '16px';
+
+      // onboarding.html is inside pages/ so siblings are at same level
       const goalMap = {
-        understand: '../pages/understand.html',
-        prepare:    '../pages/prepare.html',
-        connect:    '../pages/connect.html',
+        understand: 'understand.html',
+        prepare:    'prepare.html',
+        connect:    'connect.html',
         explore:    '../index.html'
       };
       window.location.href = goalMap[prefs.goal] || '../index.html';
     }
 
+    /* ── Init ── */
     renderOnboardingLanguages();
-    const selectedLanguage = languageTools.getStoredLanguage(localStorage);
-    document.documentElement.lang = selectedLanguage.code;
-    document.documentElement.dir = selectedLanguage.dir || 'ltr';
-    window.ClearCareI18n?.translatePage(selectedLanguage);
+    const storedLang = languageTools.getStoredLanguage(localStorage);
+    document.documentElement.lang = storedLang.code;
+    document.documentElement.dir  = storedLang.dir || 'ltr';
+    if (storedLang.code !== 'en') {
+      window.ClearCareI18n?.translatePage(storedLang);
+    }
   </script>
 </body>
 </html>
