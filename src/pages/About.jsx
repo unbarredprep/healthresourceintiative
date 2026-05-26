@@ -59,13 +59,13 @@ export default function About() {
           <h2>Our principles</h2>
           <div className="about-principles">
             {[
-              { icon: '🔒', title: 'Private by design', desc: 'Documents you upload are processed and immediately discarded. Nothing is stored.' },
-              { icon: '🌍', title: 'Works in your language', desc: 'Every feature works in 10 languages — translated live, not just the UI.' },
-              { icon: '💸', title: 'Always free', desc: 'No paywalls, no premium tier, no account required. This is a public service, not a product.' },
-              { icon: '📱', title: 'Works on any device', desc: 'Designed to work on a phone with a slow connection. No app download required.' },
+              { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, title: 'Private by design', desc: 'Documents you upload are processed and immediately discarded. Nothing is stored.' },
+              { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>, title: 'Works in your language', desc: 'Every feature works in 10 languages — translated live, not just the UI.' },
+              { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, title: 'Always free', desc: 'No paywalls, no premium tier, no account required. This is a public service, not a product.' },
+              { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>, title: 'Works on any device', desc: 'Designed to work on a phone with a slow connection. No app download required.' },
             ].map(({ icon, title, desc }) => (
               <div key={title} className="about-principle">
-                <span className="about-principle-icon">{icon}</span>
+                <div className="about-principle-icon">{icon}</div>
                 <div>
                   <strong>{title}</strong>
                   <p>{desc}</p>

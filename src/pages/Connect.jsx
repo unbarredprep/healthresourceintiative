@@ -31,32 +31,46 @@ const DISTANCES = ['5', '10', '25', '50'];
 export default function Connect() {
   const t = useTranslate(STRINGS);
 
-  const [query,    setQuery]    = useState('');
-  const [careType, setCareType] = useState('');
-  const [radius,   setRadius]   = useState('10');
-  const [loading,  setLoading]  = useState(false);
-  const [results,  setResults]  = useState(null);
-  const [error,    setError]    = useState('');
+  const [query,      setQuery]      = useState('');
+  const [careType,   setCareType]   = useState('');
+  const [radius,     setRadius]     = useState('10');
+  const [loading,    setLoading]    = useState(false);
+  const [locating,   setLocating]   = useState(false);
+  const [results,    setResults]    = useState(null);
+  const [error,      setError]      = useState('');
   const abortRef = useRef(null);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!query.trim()) { setError('Please enter an address or ZIP code.'); return; }
+  async function runSearch(params) {
     setError(''); setLoading(true); setResults(null);
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-
     try {
-      const data = await searchConnect(
-        { query: query.trim(), type: careType, radius: parseInt(radius) },
-        abortRef.current.signal
-      );
-      setResults(Array.isArray(data) ? data : data.providers || []);
+      const data = await searchConnect(params, abortRef.current.signal);
+      setResults(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
       if (err.name !== 'AbortError') setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!query.trim()) { setError('Please enter an address or ZIP code.'); return; }
+    runSearch({ locationQuery: query.trim(), careType, radiusMiles: parseInt(radius) });
+  }
+
+  function handleUseLocation() {
+    if (!navigator.geolocation) { setError('Geolocation is not supported by your browser.'); return; }
+    setLocating(true); setError('');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setLocating(false);
+        setQuery('Current location');
+        runSearch({ lat: pos.coords.latitude, lng: pos.coords.longitude, careType, radiusMiles: parseInt(radius) });
+      },
+      () => { setLocating(false); setError('Could not get your location. Please enter an address or ZIP code instead.'); }
+    );
   }
 
   return (
@@ -82,6 +96,10 @@ export default function Connect() {
                 onChange={e => setQuery(e.target.value)}
                 required
               />
+              <button type="button" className="loc-btn" onClick={handleUseLocation} disabled={locating || loading}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                {locating ? 'Locating…' : 'Use my location'}
+              </button>
             </div>
 
             <div className="form-field">

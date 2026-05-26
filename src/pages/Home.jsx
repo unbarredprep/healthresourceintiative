@@ -143,14 +143,14 @@ export default function Home() {
           <h2 className="section-title section-title--light reveal">{t('Built for the people left behind')}</h2>
           <div className="audience-cards">
             {[
-              { icon: '👨‍👩‍👧', title: t('Low-income families'),   desc: 'Find sliding-scale care, understand assistance programs, and avoid costly ER visits.' },
-              { icon: '🌍', title: t('Non-English speakers'),    desc: 'The full experience in your language — not a translation button added as an afterthought.' },
-              { icon: '❤️', title: t('Elderly individuals'),     desc: 'Large text, simple navigation, and a warm interface that treats you with dignity.' },
-              { icon: '🏥', title: t('Uninsured people'),         desc: 'No navigator, no idea what anything costs? ClearCare shows you what you can access right now.' },
-              { icon: '🌾', title: t('Rural communities'),        desc: 'Telehealth options and verified resources for people where distance is a real barrier.' },
-            ].map(({ icon, title, desc }) => (
+              { svg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, title: t('Low-income families'),   desc: 'Find sliding-scale care, understand assistance programs, and avoid costly ER visits.' },
+              { svg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>, title: t('Non-English speakers'),    desc: 'The full experience in your language — not a translation button added as an afterthought.' },
+              { svg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>, title: t('Elderly individuals'),     desc: 'Simple navigation and a warm interface that treats you with dignity.' },
+              { svg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, title: t('Uninsured people'),         desc: 'No navigator, no idea what anything costs? ClearCare shows you what you can access right now.' },
+              { svg: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>, title: t('Rural communities'),        desc: 'Telehealth options and verified resources for people where distance is a real barrier.' },
+            ].map(({ svg, title, desc }) => (
               <div key={title} className="audience-card reveal">
-                <div className="audience-icon">{icon}</div>
+                <div className="audience-icon">{svg}</div>
                 <div className="audience-card-title">{title}</div>
                 <div className="audience-card-desc">{desc}</div>
               </div>
@@ -231,23 +231,29 @@ function DemoCard() {
       </div>
       <div className="demo-result">
         <div className="demo-result-header">
-          <span className="demo-result-icon">✦</span>
+          <span className="demo-result-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
           <span className="demo-result-label">Plain language summary</span>
         </div>
         <p className="demo-result-text">
           Your blood pressure was high during your visit. The doctor wants you to take one white pill every morning with food and return in 2 weeks.
         </p>
         <div className="demo-chips">
-          <span className="chip chip-warn">⚠ Watch for dizziness</span>
-          <span className="chip chip-ok">📅 Follow-up: June 3</span>
+          <span className="chip chip-warn">Watch for dizziness</span>
+          <span className="chip chip-ok">Follow-up: June 3</span>
         </div>
       </div>
       <div className="float-card float-card-1">
-        <span>🌎</span>
+        <span className="float-card-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </span>
         <span>Available in <strong>10+ languages</strong></span>
       </div>
       <div className="float-card float-card-2">
-        <span>🔒</span>
+        <span className="float-card-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
         <span>Private &amp; <strong>secure</strong></span>
       </div>
     </div>

@@ -32,10 +32,10 @@ const VISIT_TYPES = [
 ];
 
 const RESULT_SECTIONS = [
-  { key: 'questionsToAsk',     label: 'Questions to ask your doctor',  icon: '❓', accent: 'blue' },
-  { key: 'symptomsToDescribe', label: 'How to describe your symptoms', icon: '🗣', accent: 'teal' },
-  { key: 'whatToBring',        label: 'What to bring',                 icon: '🎒', accent: 'soft' },
-  { key: 'importantReminders', label: 'Important reminders',           icon: '📌', accent: 'amber' },
+  { key: 'topQuestionsToAsk',           label: 'Questions to ask your doctor',  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, accent: 'blue' },
+  { key: 'symptomsDetailsToMention',    label: 'How to describe your symptoms', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, accent: 'teal' },
+  { key: 'medicationsDocumentsToBring', label: 'What to bring',                 icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>, accent: 'soft' },
+  { key: 'redFlagsToRaise',             label: 'Important reminders',           icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, accent: 'amber' },
 ];
 
 export default function Prepare() {
@@ -56,10 +56,12 @@ export default function Prepare() {
     }
     setError(''); setLoading(true); setResult(null);
 
-    const input = `Condition: ${condition.trim()}\nVisit type: ${visitType}${symptoms.trim() ? `\nSymptoms: ${symptoms.trim()}` : ''}`;
-
     try {
-      const data = await getHealthOutput({ taskType: 'prepare', language: language.code, input });
+      const data = await getHealthOutput({
+        taskType: 'prepare',
+        language: language.code,
+        input: { condition: condition.trim(), appointmentType: visitType, symptoms: symptoms.trim() }
+      });
       setResult(data);
       setTimeout(() => document.getElementById('prep-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch (err) {
@@ -141,7 +143,7 @@ export default function Prepare() {
           <div className="result-panel" id="prep-result">
             <div className="result-header">
               <div className="result-header-left">
-                <span className="result-badge">✦ ClearCare</span>
+                <span className="result-badge">ClearCare</span>
                 <h2>{t('Your personalized prep kit')}</h2>
                 <p className="result-context">{condition} · {visitType}</p>
               </div>
@@ -154,6 +156,17 @@ export default function Prepare() {
               </div>
             </div>
 
+            {result.appointmentSummary && (
+              <div className="result-section result-section--blue">
+                <div className="result-section-header">
+                  <span className="result-section-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </span>
+                  <h3>Appointment overview</h3>
+                </div>
+                <p className="result-text">{result.appointmentSummary}</p>
+              </div>
+            )}
             {RESULT_SECTIONS.map(({ key, label, icon, accent }) =>
               result[key] ? (
                 <div key={key} className={`result-section result-section--${accent}`}>
