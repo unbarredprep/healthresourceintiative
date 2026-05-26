@@ -1,6 +1,3 @@
-# API Keys — never push these to GitHub
-js/config.js
-
 # System files
 .DS_Store
 Thumbs.db
@@ -8,11 +5,15 @@ Thumbs.db
 # Editor folders
 .vscode/
 .idea/
+
 # API keys and local development secrets. Never push these to GitHub.
 .env
 .env.*
 .dev.vars
-healthlitapp/js/config.js
 
 # Cloudflare local output
 .wrangler/
+
+# Dependencies and build output
+node_modules/
+dist/
