@@ -5,7 +5,8 @@ const ZIPPOPOTAMUS_URL = 'https://api.zippopotam.us/us';
 const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const HRSA_HEALTH_CENTERS_URL = 'https://data.hrsa.gov/HDWAPI3_External/api/v1/GetHealthCentersAroundALocation';
-const GEMINI_GENERATE_CONTENT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 const APP_USER_AGENT = 'ClearCare/1.0 (healthresourceintiative; https://github.com/unbarredprep/healthresourceintiative)';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_RESULTS = 30;
@@ -13,9 +14,8 @@ const MAX_HEALTH_INPUT_CHARS = 12000;
 const MAX_IMAGE_DATA_URL_CHARS = 7000000;
 const MAX_UI_TRANSLATION_STRINGS = 100;
 const MAX_UI_TRANSLATION_CHARS = 500;
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
-const AI_NOT_CONFIGURED_MESSAGE = 'Language-powered explanations are not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.';
-const UI_TRANSLATION_NOT_CONFIGURED_MESSAGE = 'Site translation is not configured yet. Please add GEMINI_API_KEY as a Cloudflare secret.';
+const AI_NOT_CONFIGURED_MESSAGE = 'Language-powered explanations are not configured yet. Please add GROQ_API_KEY as a Cloudflare secret.';
+const UI_TRANSLATION_NOT_CONFIGURED_MESSAGE = 'Site translation is not configured yet. Please add GROQ_API_KEY as a Cloudflare secret.';
 const LANGUAGE_TOOLS = globalThis.ClearCareLanguages;
 
 const cache = new Map();
@@ -177,8 +177,8 @@ async function handleHealthOutput(request, env) {
     return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
   }
 
-  const geminiApiKey = getGeminiApiKey(env);
-  if (!geminiApiKey) {
+  const groqApiKey = getGroqApiKey(env);
+  if (!groqApiKey) {
     return jsonResponse({
       error: 'AI_NOT_CONFIGURED',
       message: AI_NOT_CONFIGURED_MESSAGE
@@ -212,7 +212,7 @@ async function handleHealthOutput(request, env) {
       selectedLanguage,
       taskType,
       env,
-      geminiApiKey
+      groqApiKey
     });
 
     return jsonResponse({
@@ -245,12 +245,11 @@ function handleHealthOutputStatus(request, env) {
   }
 
   return jsonResponse({
-    configured: Boolean(getGeminiApiKey(env)),
-    expectedSecretName: 'GEMINI_API_KEY',
-    model: env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+    configured: Boolean(getGroqApiKey(env)),
+    expectedSecretName: 'GROQ_API_KEY',
+    model: DEFAULT_GROQ_MODEL,
     bindings: {
-      hasGeminiApiKey: Boolean(getGeminiApiKey(env)),
-      hasGeminiModel: Boolean(String(env.GEMINI_MODEL || '').trim())
+      hasGroqApiKey: Boolean(getGroqApiKey(env))
     }
   }, 200, { 'Cache-Control': 'no-store' });
 }
@@ -267,8 +266,8 @@ async function handleUiTranslate(request, env) {
     return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405, { 'Cache-Control': 'no-store' });
   }
 
-  const geminiApiKey = getGeminiApiKey(env);
-  if (!geminiApiKey) {
+  const groqApiKey = getGroqApiKey(env);
+  if (!groqApiKey) {
     return jsonResponse({
       error: 'AI_NOT_CONFIGURED',
       message: UI_TRANSLATION_NOT_CONFIGURED_MESSAGE
@@ -300,7 +299,7 @@ async function handleUiTranslate(request, env) {
       strings,
       selectedLanguage,
       env,
-      geminiApiKey
+      groqApiKey
     });
 
     return jsonResponse({
@@ -319,126 +318,7 @@ async function handleUiTranslate(request, env) {
   }
 }
 
-async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env, geminiApiKey }) {
-  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
-  const response = await fetch(`${GEMINI_GENERATE_CONTENT_BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'x-goog-api-key': geminiApiKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: buildHealthcareSystemPrompt(selectedLanguage) }]
-      },
-      contents: buildGeminiContents(input, selectedLanguage, taskType),
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 4000,
-        responseMimeType: 'application/json'
-      }
-    })
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const error = new Error(data.error?.message || `Gemini failed with ${response.status}`);
-    error.status = response.status >= 400 && response.status < 500 ? 502 : response.status;
-    error.code = 'AI_OUTPUT_FAILED';
-    error.publicMessage = 'We could not generate language output right now. Please try again.';
-    throw error;
-  }
-
-  const outputText = extractGeminiText(data);
-  const parsedOutput = parseJsonOutput(outputText);
-  return normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, outputText);
-}
-
-async function translateUiStrings({ strings, selectedLanguage, env, geminiApiKey }) {
-  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
-  const response = await fetch(`${GEMINI_GENERATE_CONTENT_BASE_URL}/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'x-goog-api-key': geminiApiKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{
-          text: [
-            'You translate static website interface text for ClearCare, a healthcare access app.',
-            `Translate into ${selectedLanguage.instructionName}.`,
-            'Use plain, respectful language that is easy for patients and families to understand.',
-            'Keep the brand name ClearCare unchanged.',
-            'Keep numbers, URLs, email addresses, phone numbers, and HTML entities unchanged when they appear.',
-            'Do not add medical advice, diagnosis, or extra explanation.',
-            'Return only valid JSON.'
-          ].join(' ')
-        }]
-      },
-      contents: [{
-        role: 'user',
-        parts: [{
-          text: [
-            'Translate each string below. Return JSON with exactly this shape:',
-            '{"translations":{"original string":"translated string"}}',
-            'The JSON object keys must exactly match the original strings.',
-            JSON.stringify(strings)
-          ].join('\n\n')
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 5000,
-        responseMimeType: 'application/json'
-      }
-    })
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const error = new Error(data.error?.message || `Gemini translation failed with ${response.status}`);
-    error.status = response.status >= 400 && response.status < 500 ? 502 : response.status;
-    error.code = 'UI_TRANSLATION_FAILED';
-    error.publicMessage = 'We could not translate the page right now. Please try again.';
-    throw error;
-  }
-
-  const outputText = extractGeminiText(data);
-  const parsedOutput = parseJsonOutput(outputText);
-  const rawTranslations = parsedOutput?.translations && typeof parsedOutput.translations === 'object'
-    ? parsedOutput.translations
-    : parsedOutput;
-
-  return strings.reduce((translations, source) => {
-    const translated = typeof rawTranslations?.[source] === 'string'
-      ? rawTranslations[source].trim()
-      : '';
-    translations[source] = translated || source;
-    return translations;
-  }, {});
-}
-
-function getGeminiApiKey(env) {
-  return String(env.GEMINI_API_KEY || '').trim();
-}
-
-function buildHealthcareSystemPrompt(selectedLanguage) {
-  return [
-    'You are ClearCare, a healthcare access assistant.',
-    `Write entirely in ${selectedLanguage.instructionName}, unless preserving key medical terms in English in parentheses would help.`,
-    'Explain healthcare information in plain language for a patient or family member.',
-    'Do not diagnose, prescribe, or claim certainty.',
-    'Encourage the user to contact a licensed clinician.',
-    'For emergencies, tell the user to call 911 or local emergency services.',
-    'Use a calm, simple, culturally respectful tone.',
-    'Return only valid JSON. Do not wrap the JSON in markdown.'
-  ].join(' ');
-}
-
-function buildGeminiContents(input, selectedLanguage, taskType) {
+async function generateLocalizedHealthOutput({ input, selectedLanguage, taskType, env, groqApiKey }) {
   const schemaDescription = taskType === 'understand'
     ? `Return JSON with exactly these keys:
 {
@@ -459,28 +339,112 @@ function buildGeminiContents(input, selectedLanguage, taskType) {
   "disclaimer": "string"
 }`;
 
-  const taskPrompt = taskType === 'understand'
+  const userMessage = taskType === 'understand'
     ? buildUnderstandPrompt(input, selectedLanguage, schemaDescription)
     : buildPreparePrompt(input, selectedLanguage, schemaDescription);
 
-  const parts = [{ text: taskPrompt }];
-  if (taskType === 'understand' && input.fileDataUrl) {
-    const image = parseImageDataUrl(input.fileDataUrl);
-    if (image) {
-      parts.push({
-        inline_data: {
-          mime_type: image.mimeType,
-          data: image.base64Data
-        }
-      });
-    }
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${groqApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: DEFAULT_GROQ_MODEL,
+      messages: [
+        { role: 'system', content: buildHealthcareSystemPrompt(selectedLanguage) },
+        { role: 'user',   content: userMessage }
+      ],
+      temperature: 0.2,
+      max_tokens: 4000
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.error?.message || `Groq failed with ${response.status}`);
+    error.status = 502;
+    error.code = 'AI_OUTPUT_FAILED';
+    error.publicMessage = 'We could not generate the output right now. Please try again.';
+    throw error;
   }
 
-  return [{
-    role: 'user',
-    parts
-  }];
+  const outputText = data.choices?.[0]?.message?.content || '';
+  const parsedOutput = parseJsonOutput(outputText);
+  return normalizeHealthOutput(parsedOutput, taskType, selectedLanguage, outputText);
 }
+
+async function translateUiStrings({ strings, selectedLanguage, env, groqApiKey }) {
+  const systemPrompt = [
+    'You translate website interface text for ClearCare, a healthcare access app.',
+    `Translate every string into ${selectedLanguage.instructionName}.`,
+    'Use plain, respectful language easy for patients to understand.',
+    'Keep the brand name ClearCare unchanged.',
+    'Keep numbers, URLs, email addresses, and phone numbers unchanged.',
+    'Return ONLY valid JSON with this exact shape: {"translations":{"original string":"translated string"}}',
+    'JSON keys must exactly match the original strings. No markdown, no extra text.'
+  ].join(' ');
+
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${groqApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: DEFAULT_GROQ_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: `Translate these strings. Return JSON: {"translations":{"original":"translated"}}\n\n${JSON.stringify(strings)}` }
+      ],
+      temperature: 0.1,
+      max_tokens: 5000
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data.error?.message || `Groq translation failed with ${response.status}`);
+    error.status = 502;
+    error.code = 'UI_TRANSLATION_FAILED';
+    error.publicMessage = 'We could not translate the page right now. Please try again.';
+    throw error;
+  }
+
+  const outputText = data.choices?.[0]?.message?.content || '';
+  const parsedOutput = parseJsonOutput(outputText);
+  const rawTranslations = parsedOutput?.translations && typeof parsedOutput.translations === 'object'
+    ? parsedOutput.translations
+    : parsedOutput;
+
+  return strings.reduce((translations, source) => {
+    const translated = typeof rawTranslations?.[source] === 'string'
+      ? rawTranslations[source].trim()
+      : '';
+    translations[source] = translated || source;
+    return translations;
+  }, {});
+}
+
+function getGroqApiKey(env) {
+  return String(env.GROQ_API_KEY || '').trim();
+}
+
+function buildHealthcareSystemPrompt(selectedLanguage) {
+  return [
+    'You are ClearCare, a healthcare access assistant.',
+    `Write entirely in ${selectedLanguage.instructionName}, unless preserving key medical terms in English in parentheses would help.`,
+    'Explain healthcare information in plain language for a patient or family member.',
+    'Do not diagnose, prescribe, or claim certainty.',
+    'Encourage the user to contact a licensed clinician.',
+    'For emergencies, tell the user to call 911 or local emergency services.',
+    'Use a calm, simple, culturally respectful tone.',
+    'Return only valid JSON. Do not wrap the JSON in markdown.'
+  ].join(' ');
+}
+
 
 function buildUnderstandPrompt(input, selectedLanguage, schemaDescription) {
   const sourceText = input.documentText
@@ -570,13 +534,6 @@ function parseImageDataUrl(dataUrl) {
   };
 }
 
-function extractGeminiText(data) {
-  return (data.candidates || [])
-    .flatMap(candidate => candidate.content?.parts || [])
-    .map(part => part.text || '')
-    .join('\n')
-    .trim();
-}
 
 function parseJsonOutput(outputText) {
   const cleaned = String(outputText || '')

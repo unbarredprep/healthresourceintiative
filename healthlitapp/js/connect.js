@@ -132,195 +132,29 @@ async function performSearch() {
    SEARCH
    ============================================================ */
 async function searchNearbyCare({ locationQuery, lat, lng, locationLabel, radiusMiles, careType, signal }) {
+  const response = await fetch('/api/connect/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    body: JSON.stringify({ locationQuery, lat, lng, locationLabel, radiusMiles, careType })
+  });
 
-  // Geocode text query to lat/lng if needed
-  if (locationQuery && (!lat || !lng)) {
-    const coords = await geocodeLocation(locationQuery, signal);
-    if (!coords) {
-      const error = new Error('Location not found');
-      error.code  = 'LOCATION_NOT_FOUND';
+  const data = await response.json();
+
+  if (!response.ok) {
+    if (data.error === 'LOCATION_NOT_FOUND') {
+      const error = new Error(data.message);
+      error.code = 'LOCATION_NOT_FOUND';
       throw error;
     }
-    lat = coords.lat;
-    lng = coords.lng;
+    throw new Error(data.message || 'Search failed');
   }
 
-  const radiusMeters = Math.round((radiusMiles || 25) * 1609.344);
-
-  const [osmResults, placesResults] = await Promise.allSettled([
-    fetchOSMClinics(lat, lng, radiusMeters, careType, signal),
-    fetchGooglePlaces(lat, lng, radiusMeters, careType, signal)
-  ]);
-
-  const combined = [
-    ...(osmResults.status    === 'fulfilled' ? osmResults.value    : []),
-    ...(placesResults.status === 'fulfilled' ? placesResults.value : [])
-  ];
-
-  combined.sort((a, b) => (a.distanceMiles || 999) - (b.distanceMiles || 999));
-  return combined;
-}
-
-/* ── Geocode using Nominatim (free) or Google if key available ── */
-async function geocodeLocation(query, signal) {
-  const placesKey = window.CONFIG?.PLACES_KEY;
-
-  if (placesKey) {
-    try {
-      const res  = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${placesKey}`,
-        { signal }
-      );
-      const data = await res.json();
-      if (data.results?.[0]) {
-        const loc = data.results[0].geometry.location;
-        return { lat: loc.lat, lng: loc.lng };
-      }
-    } catch { /* fall through to Nominatim */ }
+  if (data.location?.label && state.currentSearch) {
+    state.currentSearch.locationLabel = data.location.label;
   }
 
-  // Free fallback — no key needed
-  try {
-    const res  = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-      { signal, headers: { 'Accept-Language': 'en' } }
-    );
-    const data = await res.json();
-    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch { return null; }
-
-  return null;
-}
-
-/* ── OpenStreetMap Overpass API — no CORS, free, no key ── */
-async function fetchOSMClinics(lat, lng, radiusMeters, careType, signal) {
-  try {
-    const amenityPattern = careType === 'pharmacy'  ? 'pharmacy'
-                         : careType === 'urgent'    ? 'clinic|hospital'
-                         : careType === 'mental'    ? 'clinic'
-                         : careType === 'hospitals' ? 'hospital'
-                         : 'clinic|hospital|health_centre|doctors|pharmacy';
-
-    const query = `
-      [out:json][timeout:25];
-      (
-        node["amenity"~"${amenityPattern}"](around:${radiusMeters},${lat},${lng});
-        way["amenity"~"${amenityPattern}"](around:${radiusMeters},${lat},${lng});
-      );
-      out center 12;
-    `;
-
-    const res  = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body:   query,
-      signal
-    });
-    const data = await res.json();
-
-    return (data.elements || []).map((el, i) => {
-      const elLat = el.lat || el.center?.lat;
-      const elLng = el.lon  || el.center?.lon;
-      const tags  = el.tags || {};
-
-      return {
-        id:            `osm-${el.id || i}`,
-        name:          tags.name || tags['name:en'] || 'Community Health Facility',
-        type:          formatOSMType(tags.amenity),
-        category:      formatOSMType(tags.amenity),
-        address:       [
-                         tags['addr:housenumber'],
-                         tags['addr:street'],
-                         tags['addr:city'],
-                         tags['addr:state']
-                       ].filter(Boolean).join(' ') || 'See directions for address',
-        phone:         tags.phone || tags['contact:phone'] || '',
-        website:       tags.website || tags['contact:website'] || '',
-        hoursText:     tags.opening_hours || 'Call for hours',
-        distanceMiles: haversineDistance(lat, lng, elLat, elLng),
-        lat:           elLat,
-        lng:           elLng,
-        source:        'OpenStreetMap',
-        disclaimer:    'Data from OpenStreetMap contributors. Call ahead to confirm services and hours.',
-      };
-    });
-
-  } catch {
-    return [];
-  }
-}
-
-function formatOSMType(amenity) {
-  if (!amenity) return 'Care Resource';
-  if (amenity.includes('pharmacy'))      return 'Pharmacy';
-  if (amenity.includes('hospital'))      return 'Hospital';
-  if (amenity.includes('health_centre')) return 'Health Centre';
-  if (amenity.includes('clinic'))        return 'Health Clinic';
-  if (amenity.includes('doctors'))       return 'Medical Office';
-  return 'Care Resource';
-}
-
-/* ── Google Places API — only runs if PLACES_KEY is set ── */
-async function fetchGooglePlaces(lat, lng, radiusMeters, careType, signal) {
-  const placesKey = window.CONFIG?.PLACES_KEY;
-  if (!placesKey) return [];
-
-  const typeMap = {
-    urgent:   'urgent_care',
-    pharmacy: 'pharmacy',
-    hospital: 'hospital',
-    all:      'health'
-  };
-  const placeType = typeMap[careType] || 'health';
-  const keyword   = careType === 'mental' ? 'mental health clinic' : 'community health clinic';
-
-  try {
-    const res  = await fetch(
-      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radiusMeters}&type=${placeType}&keyword=${encodeURIComponent(keyword)}&key=${placesKey}`,
-      { signal }
-    );
-    const data = await res.json();
-
-    return (data.results || []).slice(0, 6).map((p, i) => ({
-      id:            `places-${p.place_id || i}`,
-      name:          p.name,
-      type:          formatPlaceType(p.types),
-      category:      formatPlaceType(p.types),
-      address:       p.vicinity || 'Address unavailable',
-      phone:         '',
-      website:       '',
-      hoursText:     p.opening_hours?.open_now === true  ? 'Open now'
-                   : p.opening_hours?.open_now === false ? 'Closed now'
-                   : 'Call for hours',
-      distanceMiles: haversineDistance(lat, lng, p.geometry.location.lat, p.geometry.location.lng),
-      lat:           p.geometry.location.lat,
-      lng:           p.geometry.location.lng,
-      mapsUrl:       `https://www.google.com/maps/place/?q=place_id:${p.place_id}`,
-      source:        'Google Places',
-      disclaimer:    'Call ahead to confirm services, cost, and hours.',
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function formatPlaceType(types = []) {
-  if (types.includes('pharmacy'))  return 'Pharmacy';
-  if (types.includes('hospital'))  return 'Hospital';
-  if (types.includes('doctor'))    return 'Medical Office';
-  if (types.includes('health'))    return 'Health Clinic';
-  return 'Care Resource';
-}
-
-/* ── Haversine distance ── */
-function haversineDistance(lat1, lon1, lat2, lon2) {
-  if (!lat2 || !lon2) return null;
-  const R    = 3958.8;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a    = Math.sin(dLat/2) ** 2
-             + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180)
-             * Math.sin(dLon/2) ** 2;
-  return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1));
+  return data.results || [];
 }
 
 /* ============================================================

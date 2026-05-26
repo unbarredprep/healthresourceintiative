@@ -130,47 +130,18 @@
     try { localStorage.setItem(cacheKey(code), JSON.stringify(cache)); } catch {}
   }
 
-  /* ── Groq translation — one API call for all strings ── */
-  async function translateViaGroq(strings, language) {
-    const groqKey = root.CONFIG?.GROQ_KEY;
-    if (!groqKey || groqKey.includes('paste')) {
-      console.warn('ClearCare: GROQ_KEY not set in config.js — translation skipped.');
-      return {};
-    }
-
-    const systemPrompt = `You are a translation engine.
-The user will give you a JSON array of English strings.
-Translate every string into ${language.instructionName}.
-Return ONLY a valid JSON object where each key is the original English string
-and each value is the ${language.instructionName} translation.
-Preserve capitalization style. Do not add explanations. No markdown.`;
-
-    const userMessage = JSON.stringify(strings);
-
-    const res  = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  /* ── Worker translation — routed through /api/ui-translate ── */
+  async function translateViaWorker(strings, language) {
+    const res = await fetch('/api/ui-translate', {
       method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${groqKey}`
-      },
-      body: JSON.stringify({
-        model:       'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user',   content: userMessage  }
-        ],
-        temperature: 0.1,
-        max_tokens:  4000
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: language.code, strings })
     });
 
-    const data    = await res.json();
-    const rawText = data.choices?.[0]?.message?.content || '';
-    const cleaned = rawText.replace(/```json/gi,'').replace(/```/g,'').trim();
-    const start   = cleaned.indexOf('{');
-    const end     = cleaned.lastIndexOf('}');
-    if (start === -1 || end === -1) return {};
-    return JSON.parse(cleaned.substring(start, end + 1));
+    if (!res.ok) return {};
+
+    const data = await res.json();
+    return data.translations || {};
   }
 
   /* ── Main entry point ── */
@@ -210,7 +181,7 @@ Preserve capitalization style. Do not add explanations. No markdown.`;
       for (let i = 0; i < missing.length; i += chunkSize) {
         if (requestId !== activeRequestId) break; // user switched language
         const batch        = missing.slice(i, i + chunkSize);
-        const translations = await translateViaGroq(batch, language);
+        const translations = await translateViaWorker(batch, language);
 
         Object.entries(translations).forEach(([source, translated]) => {
           const k = normalizeText(source);
