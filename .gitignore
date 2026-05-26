@@ -17,3 +17,7 @@ Thumbs.db
 # Dependencies and build output
 node_modules/
 dist/
+
+# Dev tooling (local only)
+.wolf/
+.claude/
