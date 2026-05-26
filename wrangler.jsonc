@@ -1,27 +1,18 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "healthresourceintiative",
-  "main": "src/worker.js",
+  "main": "worker/index.js",
   "compatibility_date": "2026-05-24",
   "observability": {
     "enabled": true
   },
-  // Optional enrichment for HRSA Health Center web services:
-  // wrangler secret put HRSA_API_TOKEN
-  // Required for localized AI outputs on Understand and Prepare:
-  // wrangler secret put GEMINI_API_KEY
-  // Optional model override:
-  // wrangler secret put GEMINI_MODEL
-  // Optional contact email passed to Nominatim per its usage policy:
-  // wrangler secret put NOMINATIM_CONTACT_EMAIL
+  // Secrets — set via Cloudflare dashboard or: npx wrangler secret put <NAME>
+  // Required:  GROQ_API_KEY
+  // Optional:  HRSA_API_TOKEN, NOMINATIM_CONTACT_EMAIL
   "assets": {
-    "directory": "healthlitapp",
+    "directory": "dist",
     "binding": "ASSETS",
-    "run_worker_first": [
-      "/api/*"
-    ]
+    "run_worker_first": ["/api/*"]
   },
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
+  "compatibility_flags": ["nodejs_compat"]
 }
